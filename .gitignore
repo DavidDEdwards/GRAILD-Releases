@@ -1,0 +1,15 @@
+__pycache__/
+.pytest_cache/
+build/
+dist/
+*.pem
+*.key
+*.pfx
+*.p12
+*.dpapi
+*.private
+release-output/
+
+.venv-mac/
+*.p8
+*.mobileprovision

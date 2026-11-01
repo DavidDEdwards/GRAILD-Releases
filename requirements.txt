@@ -1,0 +1,9 @@
+pygame>=2.6
+pywebview>=5.4
+requests>=2.32
+mutagen>=1.47
+pyinstaller>=6.0
+imageio-ffmpeg>=0.6,<1
+cryptography>=44,<47
+
+keyring>=25,<26; sys_platform == "darwin"

@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JuiceSpot - Unreleased Grail Hub</title>
+    <link href="assets/tailwind.css" rel="stylesheet">
+    <link href="assets/fonts.css" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #0d0d12; color: #ffffff; }
+        dialog::backdrop { background: rgba(0,0,0,.75); }
+        .glow-purple { text-shadow: 0 0 20px rgba(168, 85, 247, 0.5); }
+        .glow-cyan { text-shadow: 0 0 20px rgba(6, 182, 212, 0.5); }
+        .glass-card { background: rgba(24, 24, 36, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(34, 211, 238, 0.2); }
+        .tab-panel-enter { animation: tab-enter 360ms cubic-bezier(0.2, 0.75, 0.25, 1) both; }
+        .correct-cover-reveal { animation: correct-cover-reveal 800ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+        .correct-cover-reveal #cover-art-inner { animation: cover-art-pop 800ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+        .correct-cover-reveal #correct-song-title { animation: correct-title 600ms ease-out 120ms both; }
+        @keyframes tab-enter { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes correct-cover-reveal { 0% { opacity: 0; transform: translateY(18px) scale(0.94); } 65% { opacity: 1; transform: translateY(-3px) scale(1.02); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
+        @keyframes cover-art-pop { 0% { transform: rotateY(-75deg) scale(0.86); filter: brightness(1.8); } 100% { transform: rotateY(0) scale(1); filter: brightness(1); } }
+        @keyframes correct-title { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        @media (prefers-reduced-motion: reduce) { .tab-panel-enter, .correct-cover-reveal, .correct-cover-reveal #cover-art-inner, .correct-cover-reveal #correct-song-title { animation-duration: 1ms; } }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between selection:bg-purple-500 selection:text-white">
+
+    <!-- TOP NAVIGATION & HEADER -->
+    <header class="w-full border-b border-slate-800 bg-[#0d0d12]/90 sticky top-0 z-50 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div>
+                <h1 class="text-3xl font-black italic tracking-wider text-purple-500 glow-purple">Grail'd</h1>
+                <p class="text-xs text-cyan-400 font-semibold tracking-wide">- Powered by Canary</p>
+                <p class="text-[11px] text-slate-400 italic mt-0.5">made by ⁹⁹⁹DAVID⁹⁹⁹</p>
+            </div>
+            <nav class="flex flex-wrap items-center justify-center gap-3 bg-[#181824] p-1.5 rounded-full border border-slate-800 shadow-inner">
+                <button onclick="switchTab('hub')" id="btn-hub" class="px-5 py-2 rounded-full text-xs font-bold transition-all bg-purple-600 text-white shadow-lg">Hub</button>
+                <button onclick="switchTab('catalog')" id="btn-catalog" class="px-5 py-2 rounded-full text-xs font-bold transition-all text-slate-400 hover:text-white">Catalog</button>
+                <button onclick="switchTab('leaderboard')" id="btn-leaderboard" class="px-5 py-2 rounded-full text-xs font-bold transition-all text-slate-400 hover:text-white">Leaderboard</button>
+                <button onclick="switchTab('settings')" id="btn-settings" class="px-5 py-2 rounded-full text-xs font-bold transition-all text-slate-400 hover:text-white">Settings</button>
+                <button onclick="switchTab('account')" id="btn-account" class="px-5 py-2 rounded-full text-xs font-bold transition-all text-slate-400 hover:text-white">Account</button>
+            </nav>
+            <button onclick="chooseMusicFolder()" class="bg-[#1e1e2f] hover:bg-[#252538] text-slate-200 font-bold px-4 py-2 rounded-lg border border-slate-700 text-xs">Choose Music Folder</button>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="max-w-7xl mx-auto px-6 py-8 flex-grow w-full">
+
+        <!-- TAB 1: HUB & DASHBOARD -->
+        <section id="tab-hub" class="space-y-8">
+            <div class="glass-card rounded-3xl p-8 md:p-12 relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-8">
+                <div class="absolute -right-20 -bottom-20 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl pointer-events-none"></div>
+                <div class="space-y-4 max-w-xl z-10">
+                    <span class="bg-cyan-500/10 text-cyan-400 text-xs font-bold px-3 py-1 rounded-full border border-cyan-500/20">Your Local Library</span>
+                    <h2 class="text-4xl md:text-5xl font-black tracking-tight">How well do you know your music?</h2>
+                    <p class="text-slate-300 text-sm leading-relaxed">Guess tracks from short audio previews, browse the songs in your selected folder, and build a score across rounds.</p>
+                    <div class="flex gap-4 pt-2">
+                        <button onclick="document.getElementById('game-modes').scrollIntoView({behavior: 'smooth'})" class="bg-gradient-to-r from-purple-600 to-cyan-500 text-white font-bold px-8 py-3.5 rounded-xl shadow-lg hover:opacity-95 transition-all cursor-pointer">Choose a Game</button>
+                        <button onclick="switchTab('catalog')" class="bg-[#1e1e2f] hover:bg-[#252538] text-slate-200 font-bold px-6 py-3.5 rounded-xl border border-slate-700 transition-all cursor-pointer">Explore Catalog</button>
+                    </div>
+                </div>
+                <div class="glass-card p-6 rounded-2xl w-full md:w-80 z-10 border border-purple-500/30 text-center space-y-4">
+                    <div class="w-20 h-20 mx-auto rounded-full bg-purple-600/20 border border-purple-500 flex items-center justify-center text-3xl shadow-lg">💿</div>
+                    <div>
+                        <h4 class="font-bold text-lg">Music Library</h4>
+                        <p id="library-summary" class="text-xs text-cyan-400 font-semibold">Loading local tracks...</p>
+                    </div>
+                    <div class="text-xs text-slate-400 bg-[#0d0d12] p-3 rounded-xl border border-slate-800">
+                        <span id="folder-summary" class="break-all">Choose a folder to load your songs.</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-card rounded-2xl p-5 space-y-3">
+                <label class="flex flex-wrap items-center justify-between gap-3 text-sm font-bold">Play from
+                    <select id="hub-library-source" onchange="changeLibrarySource(this.value)" class="rounded-lg border border-slate-700 bg-[#0d0d12] px-4 py-2 text-white"><option value="local">Local files - in-app games</option><option value="canary">Canary website player</option></select>
+                </label>
+                <label class="flex flex-wrap items-center justify-between gap-3 text-sm font-bold">
+                    <span>Play by recording era</span>
+                    <select id="hub-recording-era-select" onchange="changeRecordingEra(this.value)" class="rounded-lg border border-slate-700 bg-[#0d0d12] px-4 py-2 text-white"><option value="">All eras</option></select>
+                </label>
+                <p id="hub-era-summary" class="text-xs text-slate-400" role="status">Uses Canary recording eras for confirmed local matches.</p>
+                <button type="button" onclick="switchTab('catalog'); switchCatalogView('local')" class="text-xs font-bold text-cyan-400">Match songs and view their Canary eras &rarr;</button>
+                <button id="canary-refresh-eras" type="button" onclick="refreshCanaryEraList()" class="ml-3 text-xs font-bold text-purple-400 disabled:opacity-40">Refresh Canary eras</button>
+                <p id="canary-era-load-status" class="text-xs text-cyan-400" role="status"></p>
+            </div>
+            <div id="game-modes" class="space-y-4 scroll-mt-40">
+                <div><h2 class="text-2xl font-black">Choose your game</h2><p class="mt-1 text-sm text-slate-400">Two ways to put your music knowledge to the test.</p></div>
+                <div id="local-game-choices" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <button type="button" onclick="startGameMode('classic')" class="glass-card p-6 rounded-2xl space-y-3 text-left hover:border-purple-400 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-purple-400">
+                        <span class="text-purple-400 text-xs font-bold uppercase tracking-widest">The original</span>
+                        <h3 class="text-2xl font-black">Classic Snippets</h3>
+                        <p class="text-slate-400 text-sm leading-relaxed">Know it from the intro? Guess the song from its opening seconds. Each attempt reveals a longer preview.</p>
+                        <span class="inline-block text-sm font-bold text-purple-400">Play Classic &rarr;</span>
+                    </button>
+                    <button type="button" onclick="startGameMode('random')" class="glass-card p-6 rounded-2xl space-y-3 text-left border-cyan-500/30 hover:border-cyan-400 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-400">
+                        <span class="text-cyan-400 text-xs font-bold uppercase tracking-widest">New game</span>
+                        <h3 class="text-2xl font-black">Random Drop</h3>
+                        <p class="text-slate-400 text-sm leading-relaxed">Jump into a random part of the song. The starting point stays the same for the round as each attempt reveals more.</p>
+                        <span class="inline-block text-sm font-bold text-cyan-400">Play Random Drop &rarr;</span>
+                    </button>
+                </div>
+                <div id="canary-website-choice" class="hidden glass-card rounded-2xl p-6 space-y-4 border-cyan-500/40">
+                    <h3 class="text-2xl font-black">Canary Shuffle</h3>
+                    <p class="text-sm text-slate-300">Pick a random song from Canary, using your selected recording era. Opens Canary's own player in your browser.</p>
+                    <p class="text-xs text-slate-400">Press Play on Canary to listen. Website playback has its own controls; in-app guessing and timed snippets use local files.</p>
+                    <button id="canary-random-play" type="button" onclick="playRandomCanarySong()" class="rounded-xl bg-cyan-600 px-6 py-3 text-sm font-bold disabled:opacity-40">Open a random Canary song</button>
+                    <p id="canary-random-status" class="text-sm text-cyan-400" role="status"></p>
+                </div>
+                <p id="mode-message" class="min-h-5 text-sm text-rose-400" role="status"></p>
+            </div>
+        </section>
+
+        <!-- GAME PANEL: opened from Hub game tiles -->
+        <section id="tab-game" class="hidden max-w-2xl mx-auto space-y-6">
+            <button type="button" onclick="switchTab('hub')" class="text-sm font-bold text-slate-400 hover:text-white">&larr; All games</button>
+            <div class="glass-card rounded-3xl p-8 border border-cyan-500/30 space-y-6">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h3 id="game-mode-title" class="text-xl font-bold">Classic Snippets</h3>
+                        <p id="game-mode-description" class="mt-1 max-w-xs text-xs text-slate-400">Guess the song from its intro.</p>
+                        <p class="text-xs text-slate-400">Attempt <span id="current-attempt">1</span> of 6</p>
+                    </div>
+                    <div class="text-right">
+                        <span id="game-score" class="text-sm font-bold text-purple-400">Score: 0</span>
+                        <p class="text-xs text-orange-400 font-semibold">Streak: <span id="game-streak">0</span> 🔥</p>
+                    </div>
+                </div>
+
+                <label class="flex items-center justify-between gap-4 text-xs text-slate-400">
+                    <span>Difficulty</span>
+                    <select id="difficulty-select" onchange="changeDifficulty(this.value)" class="bg-[#0d0d12] border border-slate-700 rounded-lg px-3 py-2 text-white">
+                        <option>Easy</option><option>Medium</option><option>Hard</option>
+                    </select>
+                </label>
+
+                <label class="flex items-center justify-between gap-4 text-xs text-slate-400">
+                    <span>Recording era <span class="block mt-1 text-[11px]">Uses automatically checked or confirmed Canary eras</span></span>
+                    <select id="recording-era-select" onchange="changeRecordingEra(this.value)" class="bg-[#0d0d12] border border-slate-700 rounded-lg px-3 py-2 text-white"><option value="">All eras</option></select>
+                </label>
+                <!-- Timeline Bar -->
+                <div class="flex gap-1.5 h-2 w-full bg-[#0d0d12] p-0.5 rounded-full" id="timeline-bars">
+                    <div class="flex-1 bg-purple-500 rounded-full transition-all" id="bar-0"></div>
+                    <div class="flex-1 bg-slate-700 rounded-full transition-all" id="bar-1"></div>
+                    <div class="flex-1 bg-slate-700 rounded-full transition-all" id="bar-2"></div>
+                    <div class="flex-1 bg-slate-700 rounded-full transition-all" id="bar-3"></div>
+                    <div class="flex-1 bg-slate-700 rounded-full transition-all" id="bar-4"></div>
+                    <div class="flex-1 bg-slate-700 rounded-full transition-all" id="bar-5"></div>
+                </div>
+
+                <!-- Play Button Container -->
+                <div class="text-center py-6 space-y-4">
+                    <button onclick="playSnippetSimulation()" id="play-btn" class="bg-purple-600 hover:bg-purple-500 text-white font-black px-10 py-5 rounded-2xl shadow-xl transition-all text-lg cursor-pointer flex items-center justify-center gap-3 mx-auto">
+                        <span id="snippet-play-icon" aria-hidden="true">&#9654;</span> <span id="snippet-play-label">PLAY</span> <span id="snippet-sec">1</span>s SNIPPET
+                    </button>
+                    <label class="mx-auto flex max-w-sm items-center gap-3 text-xs text-slate-400">
+                        <span>Volume</span>
+                        <input id="volume-control" type="range" min="0" max="100" value="70" aria-label="Music volume" oninput="changeVolume(this.value)" class="flex-1 accent-cyan-400 cursor-pointer">
+                        <span id="volume-value" class="w-10 text-right tabular-nums">70%</span>
+                    </label>
+                    <div id="cover-container" class="hidden mt-4 flex flex-col items-center justify-center space-y-2">
+                        <div class="w-32 h-32 rounded-2xl bg-gradient-to-br from-purple-600 to-cyan-500 p-1 shadow-2xl">
+                            <div class="w-full h-full bg-[#0d0d12] rounded-xl flex items-center justify-center text-3xl font-bold text-cyan-400" id="cover-art-inner">💿</div>
+                        </div>
+                        <p class="text-sm font-bold text-emerald-400" id="correct-song-title">Rental</p>
+                    </div>
+                </div>
+
+                <!-- Input & Guess Box -->
+                <div id="input-area" class="space-y-3 relative">
+                    <input type="text" id="guess-input" placeholder="Type song title..." oninput="handleTyping(event)" class="w-full bg-[#0d0d12] border border-slate-700 rounded-xl px-4 py-3.5 text-white focus:outline-none focus:border-cyan-400 transition-all font-medium text-sm">
+                    <div id="suggestions" class="hidden absolute left-0 right-0 top-full mt-1 bg-[#12121c] border border-slate-800 rounded-xl overflow-hidden shadow-2xl z-20"></div>
+                    
+                    <div class="flex gap-3 pt-2">
+                        <button onclick="submitGuess()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition-all cursor-pointer text-sm shadow-lg">SUBMIT</button>
+                        <button onclick="skipAttempt()" class="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold py-3 rounded-xl transition-all cursor-pointer text-sm">SKIP / +1s</button>
+                        <button id="reroll-btn" onclick="rerollSong()" class="flex-1 bg-cyan-700 hover:bg-cyan-600 text-white font-bold py-3 rounded-xl transition-all cursor-pointer text-sm">REROLL SONG</button>
+                    </div>
+                </div>
+
+                <div id="feedback-banner" class="text-center font-bold text-sm text-cyan-400 h-6"></div>
+                <button id="next-round-btn" onclick="startNextRound()" class="hidden mx-auto bg-cyan-600 hover:bg-cyan-500 text-white font-bold px-6 py-3 rounded-xl transition-all">Next Round</button>
+            </div>
+        </section>
+
+        <!-- TAB 3: CATALOG BROWSER -->
+        <section id="tab-catalog" class="hidden space-y-6">
+            <div class="flex justify-between items-center flex-wrap gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold">Your Music Catalog</h2>
+                    <p id="catalog-summary" class="text-xs text-slate-400">Tracks found in your selected folder.</p>
+                </div>
+                <label id="local-format-control" class="flex items-center gap-3 text-xs text-slate-400">Audio format
+                    <select id="catalog-format" onchange="filterCatalog(this.value)" class="rounded-lg border border-slate-700 bg-[#1e1e2f] px-4 py-2 font-bold text-white">
+                        <option value="all">All formats</option>
+                    </select>
+                </label>
+            </div>
+
+            <div class="rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-4 flex flex-wrap items-center justify-between gap-3">
+                <p id="automatic-era-status" class="text-sm text-cyan-300" role="status">Canary automatically checks your library for recording eras.</p>
+                <button id="automatic-era-recheck" type="button" onclick="recheckAutomaticEras()" class="rounded-lg border border-cyan-500/30 px-4 py-2 text-xs font-bold disabled:opacity-40">Recheck song eras</button>
+            </div>
+            <div class="flex flex-wrap gap-2" role="tablist" aria-label="Catalogue sources">
+                <button id="local-catalog-tab" type="button" role="tab" aria-selected="true" onclick="switchCatalogView('local')" class="rounded-lg bg-purple-600 px-5 py-2 text-sm font-bold">Local library</button>
+                <button id="canary-catalog-tab" type="button" role="tab" aria-selected="false" onclick="switchCatalogView('canary')" class="rounded-lg bg-[#1e1e2f] px-5 py-2 text-sm font-bold">Canary catalogue</button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6" id="catalog-grid">
+                <!-- Dynamically populated catalog items -->
+            </div>
+            <div id="canary-browser" class="hidden space-y-5">
+                <p class="text-sm text-slate-400">Explore Canary metadata and artwork. Gameplay always uses your local audio files.</p>
+                <form onsubmit="event.preventDefault(); searchCanary(0)" class="glass-card rounded-2xl p-4 grid grid-cols-1 gap-3 sm:grid-cols-4">
+                    <label class="text-xs text-slate-400 sm:col-span-2">Song title or alias<input id="canary-search" type="search" maxlength="200" class="mt-1 w-full rounded-lg bg-[#0d0d12] border border-slate-700 px-3 py-2 text-white" placeholder="Search songs..."></label>
+                    <label class="text-xs text-slate-400">Recording era<input id="canary-era" list="canary-era-options" maxlength="60" class="mt-1 w-full rounded-lg bg-[#0d0d12] border border-slate-700 px-3 py-2 text-white" placeholder="Any era"><datalist id="canary-era-options"><option value="JUTE"><option value="WOD"><option value="DRFL"></datalist></label>
+                    <label class="text-xs text-slate-400">Category<select id="canary-category" class="mt-1 w-full rounded-lg bg-[#0d0d12] border border-slate-700 px-3 py-2 text-white"><option value="">All categories</option></select></label>
+                    <button id="canary-search-button" type="submit" class="rounded-lg bg-purple-600 px-5 py-2 text-sm font-bold disabled:opacity-50">Search Canary</button>
+                </form>
+                <p id="canary-browser-status" class="text-sm text-cyan-400" role="status"></p>
+                <div id="canary-results" class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3"></div>
+                <div class="flex items-center justify-between gap-3">
+                    <button id="canary-previous" type="button" onclick="searchCanary(canaryPage - 1)" disabled class="rounded-lg border border-slate-700 px-4 py-2 text-sm disabled:opacity-40">Previous</button>
+                    <span id="canary-pagination" class="text-xs text-slate-400"></span>
+                    <button id="canary-next" type="button" onclick="searchCanary(canaryPage + 1)" disabled class="rounded-lg border border-slate-700 px-4 py-2 text-sm disabled:opacity-40">Next</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 4: LEADERBOARD -->
+        <section id="tab-leaderboard" class="hidden max-w-2xl mx-auto space-y-6">
+            <div class="glass-card rounded-3xl p-6 sm:p-8 space-y-4 border border-cyan-500/30">
+                <div class="flex items-center justify-between gap-3">
+                    <h3 class="text-xl font-bold">Global Leaderboard</h3>
+                    <button id="global-refresh" type="button" onclick="refreshGlobalLeaderboard()" class="rounded-lg bg-purple-600 px-4 py-2 text-sm font-bold disabled:opacity-50">Refresh</button>
+                </div>
+                <p id="global-status" class="text-xs text-slate-400" role="status">Top 50 players by lifetime points.</p>
+                <div id="global-leaderboard" class="max-h-96 space-y-2 overflow-y-auto" aria-live="polite"></div>
+            </div>
+            <div class="glass-card rounded-3xl p-6 sm:p-8 space-y-6 border border-purple-500/30">
+                <h3 class="text-xl font-bold text-center">Your Records</h3>
+                <h4 class="text-xs font-bold uppercase text-slate-500">Current session</h4>
+                <div class="space-y-3">
+                    <div class="flex flex-wrap justify-between items-center gap-x-5 gap-y-2 p-4 rounded-xl bg-[#0d0d12] border border-slate-800">
+                        <div class="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
+                            <span class="shrink-0 font-black text-purple-400">Score</span>
+                            <span class="font-bold text-sm">Current session</span>
+                        </div>
+                        <span id="session-score" class="text-cyan-400 font-bold text-sm whitespace-nowrap">0 pts</span>
+                    </div>
+                    <div class="flex flex-wrap justify-between items-center gap-x-5 gap-y-2 p-4 rounded-xl bg-[#0d0d12] border border-slate-800">
+                        <div class="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
+                            <span class="shrink-0 font-black text-slate-400">Run</span>
+                            <span class="font-bold text-sm">Current streak</span>
+                        </div>
+                        <span id="session-streak" class="text-cyan-400 font-bold text-sm whitespace-nowrap">0</span>
+                    </div>
+                    <div class="flex flex-wrap justify-between items-center gap-x-5 gap-y-2 p-4 rounded-xl bg-[#0d0d12] border border-slate-800">
+                        <span class="font-bold text-sm">Correct guesses</span>
+                        <span id="session-correct-guesses" class="text-emerald-400 font-bold text-sm whitespace-nowrap">0</span>
+                    </div>
+                    <div class="flex flex-wrap justify-between items-center gap-x-5 gap-y-2 p-4 rounded-xl bg-[#0d0d12] border border-slate-800">
+                        <span class="font-bold text-sm">Wrong guesses</span>
+                        <span id="session-wrong-guesses" class="text-rose-400 font-bold text-sm whitespace-nowrap">0</span>
+                    </div>
+                    <div class="flex flex-wrap justify-between items-center gap-x-5 gap-y-2 p-4 rounded-xl bg-[#0d0d12] border border-slate-800">
+                        <div class="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
+                            <span class="shrink-0 font-black text-amber-600">Songs</span>
+                            <span class="font-bold text-sm">Available in folder</span>
+                        </div>
+                        <span id="session-tracks" class="text-cyan-400 font-bold text-sm whitespace-nowrap">0</span>
+                    </div>
+                </div>
+                <div class="border-t border-slate-800 pt-5">
+                    <h4 class="mb-3 text-sm font-bold text-slate-200">Per-song record</h4>
+                    <div class="grid grid-cols-[minmax(0,1fr)_4.25rem_4.25rem] gap-3 px-3 pb-2 text-[11px] font-bold uppercase text-slate-500">
+                        <span>Song</span><span class="text-right">Right</span><span class="text-right">Wrong</span>
+                    </div>
+                    <div id="song-leaderboard" class="max-h-80 space-y-2 overflow-y-auto" aria-live="polite"></div>
+                </div>
+            </div>
+        </section>
+
+        <section id="tab-account" class="hidden max-w-2xl mx-auto space-y-6">
+            <div id="auth-card" class="glass-card rounded-3xl p-6 sm:p-8 border border-cyan-500/30">
+                <h2 class="text-xl font-bold text-center">Your GRAIL'D Account</h2>
+                <div class="mt-6 grid grid-cols-2 gap-2 rounded-xl bg-[#0d0d12] p-1">
+                    <button id="signin-tab" type="button" onclick="showAuthForm('signin')" class="rounded-lg bg-purple-600 px-4 py-2.5 text-sm font-bold text-white">Sign In</button>
+                    <button id="register-tab" type="button" onclick="showAuthForm('register')" class="rounded-lg px-4 py-2.5 text-sm font-bold text-slate-400 hover:text-white">Create Account</button>
+                </div>
+                <div class="mt-5 space-y-3 rounded-xl border border-slate-800 bg-[#0d0d12] p-4">
+                    <p class="text-sm font-bold text-slate-200">Connect a provider</p>
+                    <p class="text-xs text-slate-500">Verify with Google or Discord, then create your GRAIL'D username and password.</p>
+                    <div class="flex flex-wrap gap-2">
+                        <button type="button" onclick="connectSocial('google')" class="flex-1 rounded-lg border border-slate-700 px-4 py-2.5 text-sm font-bold text-white hover:bg-slate-800">Continue with Google</button>
+                        <button type="button" onclick="connectSocial('discord')" class="flex-1 rounded-lg border border-indigo-500/40 bg-indigo-500/10 px-4 py-2.5 text-sm font-bold text-white hover:bg-indigo-500/20">Continue with Discord</button>
+                    </div>
+                    <p id="auth-social-message" class="min-h-5 break-words text-xs text-cyan-400" role="status"></p>
+                </div>
+                <form id="sign-in-form" class="mt-5 space-y-4" onsubmit="signIn(event)">
+                    <label class="block space-y-1.5 text-sm text-slate-300">Username
+                        <input id="signin-username" name="username" type="text" autocomplete="username" required maxlength="24" class="w-full rounded-lg border border-slate-700 bg-[#0d0d12] px-3 py-2.5 text-white focus:border-cyan-400 focus:outline-none">
+                    </label>
+                    <label class="block space-y-1.5 text-sm text-slate-300">Password
+                        <input id="signin-password" name="password" type="password" autocomplete="current-password" required maxlength="128" class="w-full rounded-lg border border-slate-700 bg-[#0d0d12] px-3 py-2.5 text-white focus:border-cyan-400 focus:outline-none">
+                    </label>
+                    <button type="submit" class="w-full rounded-lg bg-purple-600 px-4 py-3 text-sm font-bold text-white hover:bg-purple-500">Sign In</button>
+                </form>
+                <form id="register-form" class="mt-5 hidden space-y-4" onsubmit="registerAccount(event)">
+                    <label class="block space-y-1.5 text-sm text-slate-300">Username
+                        <input id="register-username" name="username" type="text" autocomplete="username" pattern="[A-Za-z0-9_]{3,24}" required maxlength="24" class="w-full rounded-lg border border-slate-700 bg-[#0d0d12] px-3 py-2.5 text-white focus:border-cyan-400 focus:outline-none">
+                        <span class="block text-xs text-slate-500">3–24 letters, numbers, or underscores</span>
+                    </label>
+                    <label class="block space-y-1.5 text-sm text-slate-300">Password
+                        <input id="register-password" name="new-password" type="password" autocomplete="new-password" minlength="10" maxlength="128" required class="w-full rounded-lg border border-slate-700 bg-[#0d0d12] px-3 py-2.5 text-white focus:border-cyan-400 focus:outline-none">
+                        <span class="block text-xs text-slate-500">At least 10 characters</span>
+                    </label>
+                    <button type="submit" class="w-full rounded-lg bg-cyan-700 px-4 py-3 text-sm font-bold text-white hover:bg-cyan-600">Create Account</button>
+                </form>
+                <p id="auth-message" class="mt-4 min-h-5 text-center text-sm text-rose-400" role="status"></p>
+            </div>
+
+            <div id="profile-card" class="glass-card hidden rounded-3xl p-6 sm:p-8 space-y-6 border border-purple-500/30">
+                <div class="flex gap-2 rounded-xl bg-[#0d0d12] p-1" role="tablist" aria-label="Account sections">
+                    <button id="account-profile-tab" type="button" role="tab" aria-selected="true" aria-controls="account-profile-panel" onclick="switchAccountTab('profile')" class="flex-1 rounded-lg bg-purple-600 px-4 py-3 text-sm font-bold">Profile</button>
+                    <button id="account-achievements-tab" type="button" role="tab" aria-selected="false" aria-controls="account-achievements-panel" onclick="switchAccountTab('achievements')" class="flex-1 rounded-lg px-4 py-3 text-sm font-bold text-slate-400">Achievements <span id="achievement-tab-count">0/50</span></button>
+                </div>
+                <div id="account-profile-panel" role="tabpanel" aria-labelledby="account-profile-tab" class="space-y-6">
+                <div class="flex flex-wrap items-center gap-4 border-b border-slate-800 pb-5">
+                    <div id="profile-avatar" class="flex h-16 w-16 shrink-0 items-center justify-center rounded-full border border-cyan-400/40 bg-cyan-400/10 text-4xl">🧃</div>
+                    <div class="min-w-0 flex-1">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <h2 id="profile-display-name" class="break-words text-xl font-bold text-white"></h2>
+                            <span id="profile-owner-tag" class="hidden rounded-full border border-amber-400/40 bg-amber-400/10 px-2.5 py-1 text-[10px] font-black uppercase text-amber-300">Owner / Creator</span>
+                        </div>
+                        <p id="profile-username" class="break-all text-sm text-cyan-400"></p>
+                        <p id="profile-created" class="mt-1 text-xs text-slate-500"></p>
+                        <p id="profile-connected-providers" class="mt-1 text-xs text-slate-400"></p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    <div class="rounded-xl bg-[#0d0d12] p-3"><p class="text-xs text-slate-500">Correct</p><p id="profile-correct" class="mt-1 text-lg font-bold text-emerald-400">0</p></div>
+                    <div class="rounded-xl bg-[#0d0d12] p-3"><p class="text-xs text-slate-500">Incorrect</p><p id="profile-wrong" class="mt-1 text-lg font-bold text-rose-400">0</p></div>
+                    <div class="rounded-xl bg-[#0d0d12] p-3"><p class="text-xs text-slate-500">Accuracy</p><p id="profile-accuracy" class="mt-1 text-lg font-bold text-cyan-400">0%</p></div>
+                    <div class="rounded-xl bg-[#0d0d12] p-3"><p class="text-xs text-slate-500">Points</p><p id="profile-points" class="mt-1 text-lg font-bold text-purple-400">0</p></div>
+                    <div class="rounded-xl bg-[#0d0d12] p-3"><p class="text-xs text-slate-500">Current streak</p><p id="profile-current-streak" class="mt-1 text-lg font-bold text-orange-300">0</p></div>
+                    <div class="rounded-xl bg-[#0d0d12] p-3"><p class="text-xs text-slate-500">Best streak</p><p id="profile-best-streak" class="mt-1 text-lg font-bold text-orange-300">0</p></div>
+                    <div class="rounded-xl bg-[#0d0d12] p-3"><p class="text-xs text-slate-500">Songs played</p><p id="profile-songs-played" class="mt-1 text-lg font-bold text-slate-200">0</p></div>
+                    <div class="rounded-xl bg-[#0d0d12] p-3"><p class="text-xs text-slate-500">Grails collected</p><p id="profile-grails" class="mt-1 text-lg font-bold text-cyan-300">0</p></div>
+                </div>
+                <div class="space-y-3 border-t border-slate-800 pt-5">
+                    <h3 class="text-sm font-bold">Your game preferences</h3>
+                    <label class="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-300">Play from
+                        <select id="account-library-source" onchange="changeLibrarySource(this.value)" class="rounded-lg border border-slate-700 bg-[#0d0d12] px-4 py-2 text-white"><option value="local">Local files - in-app games</option><option value="canary">Canary website player</option></select>
+                    </label>
+                    <label class="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-300">Recording era
+                        <select id="account-recording-era-select" onchange="changeRecordingEra(this.value)" class="rounded-lg border border-slate-700 bg-[#0d0d12] px-4 py-2 text-white"><option value="">All eras</option></select>
+                    </label>
+                    <p id="account-era-summary" class="text-xs text-slate-400">Saved separately for your account. Era metadata comes from Canary.</p>
+                </div>
+                <form id="profile-edit-form" class="space-y-4 border-t border-slate-800 pt-5" onsubmit="saveProfile(event)">
+                    <h3 class="text-sm font-bold text-slate-200">Edit Profile</h3>
+                    <div class="flex flex-wrap gap-2">
+                        <button type="button" onclick="connectSocial('google')" class="rounded-lg border border-slate-700 px-4 py-2 text-sm font-bold text-white hover:bg-slate-800">Link Google</button>
+                        <button type="button" onclick="connectSocial('discord')" class="rounded-lg border border-indigo-500/40 bg-indigo-500/10 px-4 py-2 text-sm font-bold text-white hover:bg-indigo-500/20">Link Discord</button>
+                    </div>
+                    <p id="profile-social-message" class="min-h-5 break-words text-xs text-cyan-400" role="status"></p>
+                    <label class="block space-y-1.5 text-sm text-slate-300">Display name
+                        <input id="profile-edit-name" type="text" maxlength="32" required class="w-full rounded-lg border border-slate-700 bg-[#0d0d12] px-3 py-2.5 text-white focus:border-cyan-400 focus:outline-none">
+                    </label>
+                    <label class="block space-y-1.5 text-sm text-slate-300">Avatar
+                        <select id="profile-edit-avatar" class="w-full rounded-lg border border-slate-700 bg-[#0d0d12] px-3 py-2.5 text-white focus:border-cyan-400 focus:outline-none">
+                            <option>🧃</option><option>💿</option><option>🌙</option><option>⭐</option><option>🧊</option><option>🕊️</option><option>🦋</option><option>🎧</option><option>💎</option><option>🖤</option>
+                        </select>
+                    </label>
+                    <div class="flex flex-wrap gap-3">
+                        <button type="submit" class="rounded-lg bg-purple-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-purple-500">Save Profile</button>
+                        <button type="button" onclick="signOut()" class="rounded-lg border border-slate-700 px-5 py-2.5 text-sm font-bold text-slate-300 hover:bg-slate-800">Sign Out</button>
+                    </div>
+                    <p id="profile-message" class="min-h-5 text-sm text-cyan-400" role="status"></p>
+                </form>
+                </div>
+                <div id="account-achievements-panel" role="tabpanel" aria-labelledby="account-achievements-tab" class="hidden space-y-5">
+                    <div>
+                        <p class="text-xs font-bold uppercase tracking-widest text-purple-400">Your trophy room</p>
+                        <h2 class="mt-2 text-2xl font-black">Chase the next milestone</h2>
+                        <p id="achievement-summary" class="mt-2 text-sm text-slate-300" role="status">0 of 50 unlocked</p>
+                        <progress id="achievement-overall" max="50" value="0" aria-label="Achievements unlocked" class="mt-3 h-2 w-full accent-purple-500"></progress>
+                        <p class="mt-2 text-xs text-slate-500">Earned badges stay unlocked. Existing stats count; first-attempt and Hard-mode wins are tracked from this update.</p>
+                    </div>
+                    <label class="flex items-center justify-between gap-3 text-sm text-slate-300">Show achievements
+                        <select id="achievement-filter" onchange="renderAchievements()" class="rounded-lg border border-slate-700 bg-[#0d0d12] px-3 py-2 text-white">
+                            <option value="all">All achievements</option>
+                            <option value="unlocked">Unlocked</option>
+                            <option value="locked">In progress</option>
+                        </select>
+                    </label>
+                    <div id="achievement-list" class="grid grid-cols-1 gap-3 sm:grid-cols-2"></div>
+                </div>
+            </div>
+        </section>
+
+        <section id="tab-settings" class="hidden max-w-2xl mx-auto space-y-6">
+            <div class="glass-card rounded-3xl p-6 sm:p-8 space-y-5">
+                <div><h2 class="text-2xl font-black">Settings</h2><p class="mt-1 text-sm text-slate-400">GRAIL'D <span id="settings-current-version">0.8.0</span></p></div>
+                <h3 class="text-lg font-bold">Beta updates</h3>
+                <form onsubmit="event.preventDefault(); saveUpdateSettings()" class="space-y-4">
+                    <label class="block text-sm text-slate-300">GitHub repository
+                        <input id="update-repository" maxlength="140" placeholder="owner/repository" class="mt-1 w-full rounded-lg border border-slate-700 bg-[#0d0d12] px-3 py-2 text-white">
+                    </label>
+                    <label class="block text-sm text-slate-300">Release channel
+                        <select id="update-channel" class="mt-1 w-full rounded-lg border border-slate-700 bg-[#0d0d12] px-3 py-2 text-white"><option value="beta">Beta (includes prereleases)</option><option value="stable">Stable</option></select>
+                    </label>
+                    <label class="flex gap-3 text-sm text-slate-300"><input id="update-automatic" type="checkbox" checked class="accent-purple-500">Check automatically when GRAIL'D starts</label>
+                    <div class="flex flex-wrap gap-3"><button type="submit" class="rounded-lg bg-purple-600 px-5 py-2 text-sm font-bold">Save update settings</button><button id="manual-update-check" type="button" onclick="manualUpdateCheck()" class="rounded-lg border border-slate-700 px-5 py-2 text-sm font-bold disabled:opacity-40">Check for Updates</button></div>
+                </form>
+                <p id="update-settings-status" class="text-sm text-cyan-400" role="status"></p>
+                <p id="update-last-result" class="text-xs text-slate-400"></p>
+                <p class="text-xs text-slate-500">Updates are installed after GRAIL'D closes. Your account, Discord login, music preferences, and Canary cache stay in your Windows user-data folder.</p>
+            </div>
+        </section>
+    </main>
+    <aside id="update-notification" class="hidden fixed bottom-4 right-4 left-4 sm:left-auto sm:w-[30rem] z-[70] rounded-2xl border border-purple-400/50 bg-[#181824] p-5 shadow-2xl" aria-labelledby="update-heading" aria-live="polite">
+        <h2 id="update-heading" class="text-lg font-black">GRAIL'D update <span id="update-version"></span></h2>
+        <p id="update-status" class="mt-2 text-sm text-cyan-300"></p>
+        <p id="update-notes" class="mt-3 max-h-40 overflow-y-auto whitespace-pre-wrap text-xs text-slate-300"></p>
+        <progress id="update-progress" max="100" value="0" aria-label="Update download progress" class="hidden mt-3 h-2 w-full accent-purple-500"></progress>
+        <div class="mt-4 flex flex-wrap gap-3"><button id="update-now" type="button" onclick="updateNow()" class="rounded-lg bg-purple-600 px-5 py-2 text-sm font-bold disabled:opacity-40">Update Now</button><button id="update-later" type="button" onclick="updateLater()" class="rounded-lg border border-slate-700 px-5 py-2 text-sm">Later</button><button id="update-cancel" type="button" onclick="cancelUpdateDownload()" class="hidden rounded-lg border border-rose-500/40 px-5 py-2 text-sm">Cancel download</button></div>
+    </aside>
+
+    <dialog id="song-information" aria-labelledby="song-info-heading" class="m-auto w-[calc(100%-2rem)] max-w-3xl max-h-[85vh] overflow-y-auto rounded-3xl border border-purple-500/40 bg-[#181824] p-6 text-white shadow-2xl">
+        <div class="flex items-center justify-between gap-4"><h2 id="song-info-heading" class="text-xl font-black">Song Information</h2><button type="button" onclick="document.getElementById('song-information').close()" class="rounded-lg border border-slate-700 px-3 py-2 text-sm">Close</button></div>
+        <p id="song-info-status" class="mt-3 text-sm text-cyan-400" role="status"></p>
+        <div id="song-info-content" class="mt-4 space-y-4"></div>
+        <form id="song-match-search-form" class="hidden mt-5 flex flex-wrap gap-2" onsubmit="event.preventDefault(); searchLocalCanary()">
+            <label class="flex-1 text-xs text-slate-400">Search another title or alias<input id="song-match-query" maxlength="200" class="mt-1 w-full rounded-lg border border-slate-700 bg-[#0d0d12] px-3 py-2 text-white" required></label>
+            <button type="submit" class="self-end rounded-lg bg-purple-600 px-4 py-2 text-sm font-bold">Find recordings</button>
+        </form>
+    </dialog>
+
+    <!-- FOOTER -->
+    <footer class="border-t border-slate-800 bg-[#0d0d12] py-6 text-center text-xs text-slate-500 space-y-1">
+        <p>JuiceSpot • Unreleased Grail Guessing Game</p>
+        <p class="text-slate-400 italic font-medium">made by ⁹⁹⁹DAVID⁹⁹⁹</p>
+    </footer>
+
+    <script>
+        const tabIds = ['hub', 'game', 'catalog', 'leaderboard', 'account', 'settings'];
+        let appState = null;
+        let catalogSongs = [];
+        let catalogFilter = 'all';
+        let socialPollTimer = null;
+        let snippetPlaybackTimer = null;
+        let achievementState = {entries: [], unlocked: 0, total: 50};
+
+        function switchTab(tabId) {
+            const nextPanel = document.getElementById('tab-' + tabId);
+            if (!nextPanel || !nextPanel.classList.contains('hidden')) return;
+            tabIds.forEach(id => {
+                document.getElementById('tab-' + id).classList.toggle('hidden', id !== tabId);
+                const navButton = document.getElementById('btn-' + id);
+                if (navButton) navButton.className = id === tabId || (tabId === 'game' && id === 'hub')
+                    ? 'px-5 py-2 rounded-full text-xs font-bold transition-all bg-purple-600 text-white shadow-lg'
+                    : 'px-5 py-2 rounded-full text-xs font-bold transition-all text-slate-400 hover:text-white';
+            });
+            nextPanel.classList.remove('tab-panel-enter');
+            void nextPanel.offsetWidth;
+            nextPanel.classList.add('tab-panel-enter');
+            if (tabId === 'leaderboard') refreshGlobalLeaderboard();
+        }
+
+        function showFeedback(message, success = false) {
+            const banner = document.getElementById('feedback-banner');
+            banner.textContent = message;
+            banner.className = `text-center font-bold text-sm h-6 ${success ? 'text-emerald-400' : 'text-rose-400'}`;
+        }
+
+        function showAuthForm(mode) {
+            const registering = mode === 'register';
+            document.getElementById('sign-in-form').classList.toggle('hidden', registering);
+            document.getElementById('register-form').classList.toggle('hidden', !registering);
+            document.getElementById('signin-tab').className = registering
+                ? 'rounded-lg px-4 py-2.5 text-sm font-bold text-slate-400 hover:text-white'
+                : 'rounded-lg bg-purple-600 px-4 py-2.5 text-sm font-bold text-white';
+            document.getElementById('register-tab').className = registering
+                ? 'rounded-lg bg-purple-600 px-4 py-2.5 text-sm font-bold text-white'
+                : 'rounded-lg px-4 py-2.5 text-sm font-bold text-slate-400 hover:text-white';
+        }
+
+        function renderAccountState(authState) {
+            const signedIn = authState.authenticated === true && authState.profile;
+            document.getElementById('auth-card').classList.toggle('hidden', Boolean(signedIn));
+            document.getElementById('profile-card').classList.toggle('hidden', !signedIn);
+            if (!signedIn) {
+                showAuthForm('signin');
+                switchAccountTab('profile');
+                achievementState = {entries: [], unlocked: 0, total: 50};
+                renderAchievements();
+                return;
+            }
+            achievementState = authState.achievements || {entries: [], unlocked: 0, total: 50};
+            renderAchievements();
+            const profile = authState.profile;
+            document.getElementById('profile-avatar').textContent = profile.avatar;
+            document.getElementById('profile-display-name').textContent = profile.display_name;
+            document.getElementById('profile-owner-tag').classList.toggle('hidden', !profile.is_creator);
+            document.getElementById('profile-username').textContent = `@${profile.username}`;
+            document.getElementById('profile-created').textContent = `Member since ${new Date(profile.created_at).toLocaleDateString()}`;
+            document.getElementById('profile-connected-providers').textContent = profile.linked_providers.length
+                ? `Connected: ${profile.linked_providers.map(name => name[0].toUpperCase() + name.slice(1)).join(', ')}`
+                : 'No connected accounts';
+            document.getElementById('profile-correct').textContent = profile.total_correct;
+            document.getElementById('profile-wrong').textContent = profile.total_wrong;
+            document.getElementById('profile-accuracy').textContent = `${profile.accuracy}%`;
+            document.getElementById('profile-current-streak').textContent = profile.current_streak;
+            document.getElementById('profile-best-streak').textContent = profile.best_streak;
+            document.getElementById('profile-points').textContent = profile.total_points;
+            document.getElementById('profile-songs-played').textContent = profile.songs_played;
+            document.getElementById('profile-grails').textContent = profile.grails_collected;
+            document.getElementById('profile-edit-name').value = profile.display_name;
+            document.getElementById('profile-edit-avatar').value = profile.avatar;
+        }
+
+        function switchAccountTab(tab) {
+            for (const name of ['profile', 'achievements']) {
+                const active = tab === name;
+                document.getElementById(`account-${name}-panel`).classList.toggle('hidden', !active);
+                const button = document.getElementById(`account-${name}-tab`);
+                button.setAttribute('aria-selected', String(active));
+                button.className = active
+                    ? 'flex-1 rounded-lg bg-purple-600 px-4 py-3 text-sm font-bold text-white'
+                    : 'flex-1 rounded-lg px-4 py-3 text-sm font-bold text-slate-400 hover:text-white';
+            }
+        }
+
+        function renderAchievements() {
+            const {entries, unlocked, total} = achievementState;
+            document.getElementById('achievement-tab-count').textContent = `${unlocked}/${total}`;
+            document.getElementById('achievement-summary').textContent = `${unlocked} of ${total} unlocked`;
+            document.getElementById('achievement-overall').value = unlocked;
+            const filter = document.getElementById('achievement-filter').value;
+            const list = document.getElementById('achievement-list');
+            list.replaceChildren();
+            for (const item of entries) {
+                if (filter === 'unlocked' && !item.unlocked) continue;
+                if (filter === 'locked' && item.unlocked) continue;
+                const card = document.createElement('article');
+                card.className = item.unlocked
+                    ? 'rounded-2xl border border-amber-400/40 bg-amber-400/5 p-4 space-y-2'
+                    : 'rounded-2xl border border-slate-800 bg-[#0d0d12] p-4 space-y-2';
+                const category = document.createElement('p');
+                category.className = 'text-[10px] font-bold uppercase tracking-widest text-purple-400';
+                category.textContent = item.category;
+                const title = document.createElement('h3');
+                title.className = 'font-bold text-white';
+                title.textContent = `${item.unlocked ? '\u2605' : '\u25c7'} ${item.name}`;
+                const description = document.createElement('p');
+                description.className = 'text-xs leading-relaxed text-slate-400';
+                description.textContent = item.description;
+                const progress = document.createElement('progress');
+                progress.max = item.target;
+                progress.value = item.progress;
+                progress.setAttribute('aria-label', item.name);
+                progress.className = 'h-1.5 w-full accent-purple-500';
+                const status = document.createElement('p');
+                status.className = item.unlocked ? 'text-xs text-amber-300' : 'text-xs text-slate-400';
+                status.textContent = item.unlocked
+                    ? `Unlocked ${new Date(item.unlocked_at).toLocaleDateString()}`
+                    : `${item.progress.toLocaleString()} / ${item.target.toLocaleString()}`;
+                card.append(category, title, description, progress, status);
+                list.append(card);
+            }
+            if (!list.childElementCount) {
+                const empty = document.createElement('p');
+                empty.className = 'text-sm text-slate-400 sm:col-span-2';
+                empty.textContent = filter === 'unlocked'
+                    ? 'Your first trophy is waiting. Play a round to get started.'
+                    : 'No achievements to show for this filter.';
+                list.append(empty);
+            }
+        }
+
+        async function connectSocial(provider) {
+            const profileView = !document.getElementById('profile-card').classList.contains('hidden');
+            const statusNode = document.getElementById(profileView ? 'profile-social-message' : 'auth-social-message');
+            statusNode.textContent = `Starting ${provider} authorization...`;
+            try {
+                const started = await window.pywebview.api.start_social_auth(provider);
+                if (!started.success) {
+                    statusNode.textContent = started.message;
+                    return;
+                }
+                statusNode.textContent = started.message;
+                if (socialPollTimer) window.clearInterval(socialPollTimer);
+                const deadline = Date.now() + 180000;
+                socialPollTimer = window.setInterval(async () => {
+                    try {
+                        const result = await window.pywebview.api.get_social_auth_status();
+                        if (result.status !== 'complete' && Date.now() < deadline) return;
+                        window.clearInterval(socialPollTimer);
+                        socialPollTimer = null;
+                        statusNode.textContent = result.message || 'Provider sign-in timed out.';
+                        if (!result.success) return;
+                        if (result.registration_required) {
+                            showAuthForm('register');
+                            switchTab('account');
+                            document.getElementById('register-username').focus();
+                            document.getElementById('auth-social-message').textContent = result.email
+                                ? `${result.message} Verified email: ${result.email}`
+                                : result.message;
+                            return;
+                        }
+                        if (result.authenticated) {
+                            renderAccountState(result);
+                            renderState(await window.pywebview.api.get_state());
+                            await refreshLeaderboard();
+                            document.getElementById('profile-social-message').textContent = result.message;
+                            switchTab('account');
+                        }
+                    } catch (error) {
+                        window.clearInterval(socialPollTimer);
+                        socialPollTimer = null;
+                        statusNode.textContent = `Provider sign-in failed: ${error.message}`;
+                    }
+                }, 700);
+            } catch (error) {
+                statusNode.textContent = `Could not connect ${provider}: ${error.message}`;
+            }
+        }
+
+        async function signIn(event) {
+            event.preventDefault();
+            const message = document.getElementById('auth-message');
+            try {
+                const result = await window.pywebview.api.sign_in(
+                    document.getElementById('signin-username').value,
+                    document.getElementById('signin-password').value
+                );
+                message.textContent = result.message;
+                if (!result.success) return;
+                document.getElementById('signin-password').value = '';
+                renderAccountState(result);
+                renderState(await window.pywebview.api.get_state());
+                await refreshLeaderboard();
+                document.getElementById('profile-message').textContent = result.message;
+            } catch (error) {
+                message.textContent = `Sign-in failed: ${error.message}`;
+            }
+        }
+
+        async function registerAccount(event) {
+            event.preventDefault();
+            const message = document.getElementById('auth-message');
+            try {
+                const result = await window.pywebview.api.register_account(
+                    document.getElementById('register-username').value,
+                    document.getElementById('register-password').value
+                );
+                message.textContent = result.message;
+                if (!result.success) return;
+                document.getElementById('register-password').value = '';
+                renderAccountState(result);
+                renderState(await window.pywebview.api.get_state());
+                await refreshLeaderboard();
+                document.getElementById('profile-message').textContent = result.message;
+            } catch (error) {
+                message.textContent = `Account creation failed: ${error.message}`;
+            }
+        }
+
+        async function saveProfile(event) {
+            event.preventDefault();
+            const message = document.getElementById('profile-message');
+            try {
+                const result = await window.pywebview.api.update_profile(
+                    document.getElementById('profile-edit-name').value,
+                    document.getElementById('profile-edit-avatar').value
+                );
+                message.textContent = result.message;
+                if (result.success) renderAccountState(result);
+            } catch (error) {
+                message.textContent = `Profile update failed: ${error.message}`;
+            }
+        }
+
+        async function signOut() {
+            const result = await window.pywebview.api.sign_out();
+            renderAccountState({authenticated: false});
+            renderState(await window.pywebview.api.get_state());
+            await refreshLeaderboard();
+            document.getElementById('auth-message').textContent = result.message;
+            document.getElementById('profile-message').textContent = '';
+            switchTab('account');
+        }
+
+        function renderState(state) {
+            appState = state;
+            resetSnippetButton();
+            const randomMode = state.game_mode === 'random';
+            document.getElementById('game-mode-title').textContent = randomMode ? 'Random Drop' : 'Classic Snippets';
+            document.getElementById('game-mode-description').textContent = randomMode
+                ? 'A random starting point, with longer previews each attempt.'
+                : 'Guess the song from its intro.';
+            updateRecordingEraOptions(state);
+            const durations = state.durations;
+            const attempt = Math.min(state.attempt, durations.length - 1);
+            document.getElementById('current-attempt').textContent = state.has_track ? attempt + 1 : 0;
+            document.getElementById('current-attempt').parentElement.lastChild.textContent = ` of ${durations.length}`;
+            document.getElementById('snippet-sec').textContent = durations[attempt] || 0;
+            document.getElementById('game-score').textContent = `Score: ${state.score}`;
+            document.getElementById('game-streak').textContent = state.streak;
+            document.getElementById('session-score').textContent = `${state.score} pts`;
+            document.getElementById('session-streak').textContent = state.streak;
+            document.getElementById('session-correct-guesses').textContent = state.correct_guesses;
+            document.getElementById('session-wrong-guesses').textContent = state.wrong_guesses;
+            document.getElementById('next-round-btn').classList.toggle('hidden', !state.game_over);
+            document.getElementById('session-tracks').textContent = state.track_count;
+            document.getElementById('library-summary').textContent = `${state.track_count} audio tracks`;
+            document.getElementById('folder-summary').textContent = state.folder;
+            document.getElementById('catalog-summary').textContent = `${state.track_count} tracks in ${state.folder}`;
+            document.getElementById('difficulty-select').value = state.difficulty;
+            document.getElementById('difficulty-select').disabled =
+                !state.authenticated || !state.has_track || state.game_over;
+            document.getElementById('volume-control').value = state.volume;
+            document.getElementById('volume-value').textContent = `${state.volume}%`;
+            document.querySelectorAll('#play-btn, #guess-input, #input-area button').forEach(button => {
+                button.disabled = !state.authenticated || !state.has_track || state.game_over;
+            });
+            document.getElementById('reroll-btn').disabled =
+                !state.authenticated || !state.has_track || state.game_over || (state.eligible_track_count ?? state.track_count) < 2;
+            document.querySelectorAll('#timeline-bars > div').forEach((bar, index) => {
+                bar.classList.toggle('bg-purple-500', index <= attempt && state.has_track);
+                bar.classList.toggle('bg-slate-700', index > attempt || !state.has_track);
+                bar.classList.toggle('hidden', index >= durations.length);
+            });
+            if (!state.authenticated) {
+                showFeedback('Sign in to play and save your profile statistics.');
+            } else if (!state.has_track) {
+                showFeedback(state.error || 'Choose a folder containing audio files.');
+            }
+        }
+
+        async function chooseMusicFolder() {
+            try {
+                const result = await window.pywebview.api.select_music_folder();
+                renderState(result.state);
+                await refreshCatalog();
+                watchAutomaticEraScan();
+                await refreshLeaderboard();
+                if (result.message) showFeedback(result.message, result.state.track_count > 0);
+            } catch (error) {
+                showFeedback(`Could not select a music folder: ${error.message}`);
+            }
+        }
+
+        async function startGameMode(mode) {
+            if (!appState || !appState.authenticated) {
+                switchTab('account');
+                document.getElementById('auth-message').textContent = 'Sign in to play a game.';
+                return;
+            }
+            const message = document.getElementById('mode-message');
+            try {
+                const state = await window.pywebview.api.set_game_mode(mode);
+                renderState(state);
+                document.getElementById('guess-input').value = '';
+                document.getElementById('suggestions').classList.add('hidden');
+                document.getElementById('cover-container').classList.add('hidden');
+                showFeedback(state.has_track ? '' : 'Choose a music folder to start.');
+                message.textContent = '';
+                switchTab('game');
+            } catch (error) {
+                message.textContent = 'Could not start the game. Please try again.';
+            }
+        }
+
+        async function changeDifficulty(difficulty) {
+            renderState(await window.pywebview.api.set_difficulty(difficulty));
+            showFeedback('New round started.', true);
+        }
+
+        async function changeVolume(value) {
+            document.getElementById('volume-value').textContent = `${value}%`;
+            const result = await window.pywebview.api.set_volume(Number(value) / 100);
+            if (result.error) showFeedback(result.error);
+        }
+
+        function resetSnippetButton() {
+            window.clearTimeout(snippetPlaybackTimer);
+            document.getElementById('snippet-play-label').textContent = 'PLAY';
+            document.getElementById('snippet-play-icon').textContent = '\u25b6';
+            document.getElementById('play-btn').classList.remove('animate-pulse');
+        }
+
+        async function playSnippetSimulation() {
+            const button = document.getElementById('play-btn');
+            const result = await window.pywebview.api.play_snippet();
+            if (!result.ok) {
+                if (result.state) {
+                    renderState(result.state);
+                    await refreshCatalog();
+                }
+                showFeedback(result.message);
+                return;
+            }
+            resetSnippetButton();
+            document.getElementById('snippet-play-label').textContent = 'PLAYING';
+            document.getElementById('snippet-play-icon').textContent = '\u266b';
+            button.classList.add('animate-pulse');
+            snippetPlaybackTimer = window.setTimeout(resetSnippetButton, result.duration * 1000);
+        }
+
+        function handleTyping(event) {
+            const query = event.target.value.trim().toLocaleLowerCase();
+            const box = document.getElementById('suggestions');
+            box.replaceChildren();
+            const matches = query ? catalogSongs.filter(song => song.title.toLocaleLowerCase().includes(query)).slice(0, 6) : [];
+            matches.forEach(song => {
+                const item = document.createElement('button');
+                item.type = 'button';
+                item.className = 'block w-full p-3 text-left hover:bg-purple-600 hover:text-white text-xs text-cyan-400 font-semibold border-b border-slate-800';
+                item.textContent = song.title;
+                item.addEventListener('click', () => selectSuggestion(song.title));
+                box.append(item);
+            });
+            box.classList.toggle('hidden', matches.length === 0);
+        }
+
+        function selectSuggestion(title) {
+            document.getElementById('guess-input').value = title;
+            document.getElementById('suggestions').classList.add('hidden');
+        }
+
+        async function submitGuess() {
+            const guess = document.getElementById('guess-input').value.trim();
+            if (!guess) {
+                showFeedback('Type a song title first.');
+                return;
+            }
+            await applyRoundResult(await window.pywebview.api.submit_guess(guess));
+        }
+
+        async function rerollSong() {
+            const result = await window.pywebview.api.reroll_song();
+            renderState(result.state);
+            document.getElementById('guess-input').value = '';
+            document.getElementById('suggestions').classList.add('hidden');
+            document.getElementById('cover-container').classList.add('hidden');
+            showFeedback(result.message, result.changed);
+        }
+
+        async function skipAttempt() {
+            await applyRoundResult(await window.pywebview.api.skip_attempt());
+        }
+
+        async function applyRoundResult(result) {
+            renderState(result.state);
+            await refreshLeaderboard();
+            const profileState = await window.pywebview.api.get_account_state();
+            renderAccountState(profileState);
+            const feedback = result.audio_error
+                ? `${result.message} Audio error: ${result.audio_error}`
+                : result.message || '';
+            showFeedback(feedback, result.success === true && !result.audio_error);
+            if (result.state.game_over) {
+                showCover(result.cover, result.state.title, result.success === true);
+            }
+        }
+
+        async function startNextRound() {
+            const state = await window.pywebview.api.next_round();
+            renderState(state);
+            document.getElementById('guess-input').value = '';
+            document.getElementById('suggestions').classList.add('hidden');
+            document.getElementById('cover-container').classList.add('hidden');
+            showFeedback(state.has_track ? 'New round started.' : state.error || 'No songs are available.', state.has_track);
+        }
+
+        function showCover(source, title, correct = false) {
+            const container = document.getElementById('cover-container');
+            const art = document.getElementById('cover-art-inner');
+            container.classList.remove('correct-cover-reveal');
+            if (correct) void container.offsetWidth;
+            art.replaceChildren();
+            if (source) {
+                const image = document.createElement('img');
+                image.src = source;
+                image.alt = `${title} cover art`;
+                image.className = 'w-full h-full object-cover rounded-xl';
+                art.append(image);
+            } else {
+                art.textContent = '💿';
+            }
+            document.getElementById('correct-song-title').textContent = title;
+            container.classList.remove('hidden');
+            if (correct) container.classList.add('correct-cover-reveal');
+        }
+
+        async function refreshCatalog() {
+            catalogSongs = await window.pywebview.api.get_catalog();
+            renderCatalog(catalogFilter);
+        }
+
+        async function refreshGlobalLeaderboard() {
+            const button = document.getElementById('global-refresh');
+            if (button.disabled) return;
+            button.disabled = true;
+            const status = document.getElementById('global-status');
+            const list = document.getElementById('global-leaderboard');
+            status.textContent = 'Loading global rankings...';
+            try {
+                const result = await window.pywebview.api.get_global_leaderboard();
+                list.replaceChildren();
+                status.textContent = result.message;
+                for (const entry of result.entries || []) {
+                    const row = document.createElement('div');
+                    row.className = 'flex items-center justify-between gap-4 rounded-xl bg-[#0d0d12] p-4 text-sm';
+                    const name = document.createElement('span');
+                    name.className = 'min-w-0 break-words font-bold';
+                    name.textContent = `${entry.rank}. ${entry.display_name}`;
+                    const score = document.createElement('span');
+                    score.className = 'shrink-0 text-cyan-400';
+                    score.textContent = `${Number(entry.points).toLocaleString()} pts`;
+                    row.append(name, score);
+                    list.append(row);
+                }
+                if (result.success && !(result.entries || []).length) {
+                    const empty = document.createElement('p');
+                    empty.className = 'text-sm text-slate-400';
+                    empty.textContent = 'No scores yet. Connect your provider and be the first.';
+                    list.append(empty);
+                }
+            } catch (error) {
+                status.textContent = 'Could not load rankings. Refresh to retry.';
+            } finally {
+                button.disabled = false;
+            }
+        }
+
+        async function refreshLeaderboard() {
+            const leaderboard = document.getElementById('song-leaderboard');
+            const songs = await window.pywebview.api.get_song_leaderboard();
+            leaderboard.replaceChildren();
+            if (!songs.length) {
+                const empty = document.createElement('p');
+                empty.className = 'px-3 py-4 text-sm text-slate-500';
+                empty.textContent = 'No songs in the current folder.';
+                leaderboard.append(empty);
+                return;
+            }
+            songs.forEach(song => {
+                const row = document.createElement('div');
+                row.className = 'grid grid-cols-[minmax(0,1fr)_4.25rem_4.25rem] items-center gap-3 rounded-lg border border-slate-800 bg-[#0d0d12] px-3 py-2.5 text-sm';
+                const title = document.createElement('span');
+                title.className = 'min-w-0 break-words text-slate-200';
+                title.textContent = song.title;
+                const correct = document.createElement('span');
+                correct.className = 'text-right font-bold tabular-nums text-emerald-400';
+                correct.textContent = song.correct;
+                const wrong = document.createElement('span');
+                wrong.className = 'text-right font-bold tabular-nums text-rose-400';
+                wrong.textContent = song.wrong;
+                row.append(title, correct, wrong);
+                leaderboard.append(row);
+            });
+        }
+
+        function renderCatalog(filter = 'all') {
+            const formatSelect = document.getElementById('catalog-format');
+            const formats = [...new Set(catalogSongs.map(song => song.format))].sort();
+            if (filter !== 'all' && !formats.includes(filter)) filter = 'all';
+            formatSelect.replaceChildren();
+            for (const format of ['all', ...formats]) {
+                const option = document.createElement('option');
+                option.value = format;
+                option.textContent = format === 'all' ? 'All formats' : format;
+                formatSelect.append(option);
+            }
+            formatSelect.value = filter;
+            catalogFilter = filter;
+            const grid = document.getElementById('catalog-grid');
+            const songs = filter === 'all' ? catalogSongs : catalogSongs.filter(song => song.format === filter);
+            grid.replaceChildren();
+            songs.forEach(song => {
+                const card = document.createElement('article');
+                card.className = 'glass-card p-4 rounded-2xl space-y-3 border border-slate-800 hover:border-purple-500/50 transition-all';
+                const art = document.createElement('div');
+                art.className = 'h-32 bg-[#0d0d12] rounded-xl flex items-center justify-center text-3xl shadow-inner text-cyan-400 font-bold border border-slate-800';
+                art.textContent = '💿';
+                const title = document.createElement('h4');
+                title.className = 'font-bold text-sm text-white break-words';
+                title.textContent = song.title;
+                const format = document.createElement('p');
+                format.className = 'text-[11px] text-purple-400 font-semibold';
+                format.textContent = song.format;
+                const details = document.createElement('div');
+                details.append(title, format);
+                card.append(art, details);
+                addLocalCanaryControls(card, song);
+                grid.append(card);
+            });
+            if (!songs.length) {
+                const empty = document.createElement('p');
+                empty.className = 'text-sm text-slate-400 col-span-full';
+                empty.textContent = 'No matching audio files. Choose a folder to load your music.';
+                grid.append(empty);
+            }
+        }
+
+        function filterCatalog(format) {
+            renderCatalog(format);
+        }
+
+        window.addEventListener('pywebviewready', async () => {
+            const authState = await window.pywebview.api.get_account_state();
+            renderAccountState(authState);
+            renderState(await window.pywebview.api.get_state());
+            await refreshCatalog();
+            await refreshLeaderboard();
+            watchAutomaticEraScan();
+            if (!authState.authenticated) switchTab('account');
+        });
+    </script>
+    <script src="canary_ui.js"></script>
+    <script src="update_ui.js"></script>
+</body>
+</html>
