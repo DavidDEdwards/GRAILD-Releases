@@ -3,9 +3,47 @@ import argparse
 import os
 from pathlib import Path
 import platform
+import shutil
 import subprocess
 import sys
 import uuid
+
+
+UI_ASSET_FILES = (
+    'tailwind.css', 'fonts.css', 'inter-400.ttf', 'inter-600.ttf',
+    'inter-700.ttf', 'inter-900.ttf', 'Inter-OFL.txt', 'Tailwind-LICENSE.txt',
+)
+
+
+def ensure_ui_assets(root):
+    """Repair browser uploads that flattened assets/ into the repository root.
+
+    Only the known UI resources are copied, and existing assets are preserved.
+    Validate the whole list before creating anything so incomplete uploads fail
+    with an actionable message rather than a PyInstaller traceback.
+    """
+    root = Path(root).resolve()
+    assets = root / 'assets'
+    missing = []
+    repairs = []
+    for name in UI_ASSET_FILES:
+        target = assets / name
+        if target.is_file():
+            continue
+        source = root / name
+        if source.is_file():
+            repairs.append((source, target))
+        else:
+            missing.append('assets/' + name)
+    if missing:
+        raise SystemExit('Missing UI resources: ' + ', '.join(missing) +
+                         '. Upload the assets folder, or its files to the repository root; the builder can restore the folder.')
+    if repairs:
+        assets.mkdir(exist_ok=True)
+        for source, target in repairs:
+            shutil.copyfile(source, target)
+            print('Restored uploaded resource: assets/' + target.name, flush=True)
+    return assets
 
 
 def main():
@@ -29,13 +67,13 @@ def main():
     output = args.output_dir.resolve() if args.output_dir else root / 'dist' / 'releases' / ('v' + APP_VERSION) / ('macOS-' + arch)
     if output.exists():
         raise SystemExit('Output already exists; archive it before rebuilding. Nothing was overwritten.')
+    ensure_ui_assets(root)
     stage = root / 'build' / ('mac-' + uuid.uuid4().hex)
     subprocess.run([sys.executable, '-m', 'PyInstaller', '--noconfirm', '--clean',
                     '--distpath', str(stage / 'dist'), '--workpath', str(stage / 'work'),
                     str(root / 'GRAILD-mac.spec')], cwd=root, check=True)
     output.mkdir(parents=True)
     app = output / 'GRAILD.app'
-    import shutil
     shutil.move(str(stage / 'dist' / 'GRAILD.app'), app)
     subprocess.run(['codesign', '--verify', '--deep', '--strict', str(app)], check=True)
     archive = output / ('GRAILD-' + APP_VERSION + '-macOS-' + arch + '.zip')
