@@ -1,0 +1,87 @@
+name: Build GRAILD for macOS
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: macOS ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15-intel
+            arch: x86_64
+            python-arch: x64
+          - runner: macos-15
+            arch: arm64
+            python-arch: arm64
+    env:
+      GRAILD_BUILD_ARCH: ${{ matrix.arch }}
+      PIP_DISABLE_PIP_VERSION_CHECK: '1'
+    steps:
+      - name: Check out application source
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up native Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+          architecture: ${{ matrix.python-arch }}
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip check
+
+      - name: Run platform tests
+        run: python -m unittest test_mac_support -v
+
+      - name: Build and verify app bundle
+        run: python build_macos.py --expected-arch "$GRAILD_BUILD_ARCH"
+
+      - name: Record ZIP checksum and build information
+        run: |
+          python - <<'PY'
+          import hashlib, json, os, platform
+          from pathlib import Path
+          from app_version import APP_VERSION
+          arch = os.environ['GRAILD_BUILD_ARCH']
+          folder = Path('dist/releases') / ('v' + APP_VERSION) / ('macOS-' + arch)
+          archive = folder / ('GRAILD-' + APP_VERSION + '-macOS-' + arch + '.zip')
+          digest = hashlib.sha256(archive.read_bytes()).hexdigest()
+          (folder / 'SHA256SUMS.txt').write_text(digest + '  ' + archive.name + '\n')
+          info = {'version': APP_VERSION, 'architecture': arch,
+                  'macos_build_host': platform.mac_ver()[0],
+                  'commit': os.environ['GITHUB_SHA'], 'sha256': digest,
+                  'signing': 'ad-hoc test build; not notarized',
+                  'interactive_runtime_tests': 'pending on a real tester Mac'}
+          (folder / 'build-info.json').write_text(json.dumps(info, indent=2))
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
+              summary.write(f'### GRAILD {APP_VERSION} macOS {arch}\n\n')
+              summary.write(f'Built `{archive.name}`. Download the artifact below.\n\n')
+              summary.write('This is an ad-hoc signed test build. Developer ID notarization and interactive audio/login tests are still pending. No GitHub Release was published.\n')
+          PY
+
+      # Upload the ditto ZIP, not the raw .app: it preserves permissions and symlinks.
+      - name: Upload Mac test build
+        uses: actions/upload-artifact@v6
+        with:
+          name: GRAILD-macOS-${{ matrix.arch }}
+          path: |
+            dist/releases/*/macOS-${{ matrix.arch }}/*.zip
+            dist/releases/*/macOS-${{ matrix.arch }}/SHA256SUMS.txt
+            dist/releases/*/macOS-${{ matrix.arch }}/build-info.json
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
