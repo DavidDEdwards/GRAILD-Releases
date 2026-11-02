@@ -81,3 +81,6 @@ def account_achievements(connection, user_id, now):
         entries.append({**item, "progress": item["target"] if unlocked else progress,
                         "unlocked": unlocked, "unlocked_at": earned.get(item["id"])})
     return {"entries": entries, "unlocked": sum(item["unlocked"] for item in entries), "total": len(ACHIEVEMENTS)}
+
+
+
