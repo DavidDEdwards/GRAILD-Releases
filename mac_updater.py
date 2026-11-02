@@ -351,3 +351,4 @@ def main(argv=None):
                 atomic_json(job / 'result.json', {'status':'failed','message':str(error)})
         except Exception: pass
         return 1
+
