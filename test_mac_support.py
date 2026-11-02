@@ -38,15 +38,14 @@ class MacSupportTests(unittest.TestCase):
             with self.assertRaises(OSError):platform_support.mac_session_data(b'old-ciphertext', decrypt=True)
         backend.set_password.assert_not_called()
 
-    def test_mac_never_requests_windows_release(self):
+    def test_mac_uses_native_update_platform(self):
         from auto_update import UpdateManager
         with tempfile.TemporaryDirectory() as temp:
             session=Mock()
-            manager=UpdateManager(root=temp,session=session)
-            with patch('auto_update.sys.platform','darwin'):
-                self.assertEqual(manager.check()['status'],'unsupported')
-                self.assertFalse(manager.snapshot()['can_download'])
-            session.get.assert_not_called()
+            with patch('auto_update.sys.platform','darwin'), patch('auto_update.platform.machine',return_value='arm64'):
+                manager=UpdateManager(root=temp,session=session)
+            self.assertEqual(manager.platform,'macos')
+            self.assertEqual(manager.architecture,'arm64')
 
 
 if __name__=='__main__':unittest.main()

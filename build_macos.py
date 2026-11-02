@@ -79,6 +79,11 @@ def main():
     subprocess.run(['codesign', '--verify', '--deep', '--strict', str(app)], check=True)
     archive = output / ('GRAILD-' + APP_VERSION + '-macOS-' + arch + '.zip')
     subprocess.run(['ditto', '-c', '-k', '--sequesterRsrc', '--keepParent', str(app), str(archive)], check=True)
+    from mac_update_security import archive_bundle_digest, bundle_digest, verify_bundle
+    digest = archive_bundle_digest(archive)
+    if digest != bundle_digest(app):
+        raise SystemExit('The archived Mac app does not match the native bundle. Do not publish it.')
+    verify_bundle(app, {'bundle_sha256':digest,'version':APP_VERSION,'architecture':arch})
     print('Built locally (not published):', archive)
     print('Distribution still requires Developer ID signing/notarization and testing on this Mac.')
 

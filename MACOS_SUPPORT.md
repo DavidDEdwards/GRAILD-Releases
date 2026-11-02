@@ -1,6 +1,6 @@
 # GRAIL'D v0.9.0 macOS support
 
-Status: platform compatibility and native build configuration are implemented. Native Mac builds and runtime acceptance are **pending**; this Windows environment cannot produce or certify a macOS app. Existing signed 0.8.0/0.8.1 release files were not changed. Source version is now 0.9.0.
+Status: platform compatibility, native Mac builds, and signed Mac update support are implemented for source version 0.9.1. Native builds run on GitHub-hosted Macs; interactive runtime acceptance and Developer ID notarization remain separate from compilation. Existing signed 0.8.0/0.8.1 release files were not changed.
 
 ## Changes
 
@@ -10,7 +10,7 @@ Status: platform compatibility and native build configuration are implemented. N
 - Session and leaderboard tokens are encrypted with a Fernet key kept in the user's macOS login Keychain. The Apple Keychain backend is selected explicitly; no plaintext credential fallback. Windows retains its existing DPAPI and AppData behavior.
 - Keychain may ask the user for permission. A locked/unavailable Keychain returns a sign-in error rather than saving unprotected tokens. Use a stable Developer ID signing identity for releases; changed/ad-hoc identities can cause new Keychain permission prompts.
 - Local music remains in user-selected folders. The app bundles pygame, FFmpeg, Python, webview resources, local CSS and fonts.
-- Mac updates are **manual for this first beta**. The update checker reports this in Settings and does not offer Windows payloads. The existing Windows automatic updater is retained. Secure automatic replacement of a signed `.app` bundle is a separate follow-up.
+- Mac updates use architecture-specific publisher-signed manifests and ZIPs, with in-app Update Now/Later, independent bundle replacement, startup confirmation and rollback. See MAC_AUTO_UPDATES.md. Older manual-only Mac builds need the new updater-enabled app installed once. Windows automatic updates are retained.
 
 Accounts and caches are local to each computer. This change does not create cross-device profile synchronization. Friends sign in/create their own accounts on their Mac; the build does not include the publisher's session.
 
@@ -72,7 +72,7 @@ After successful notarization/stapling, re-create the ZIP from the stapled bundl
 ditto -c -k --sequesterRsrc --keepParent dist/releases/v0.9.0/macOS-arm64/GRAILD.app dist/releases/v0.9.0/macOS-arm64/GRAILD-0.9.0-macOS-arm64-notarized.zip
 ```
 
-Upload the final notarized ZIP for each architecture to the v0.9.0 GitHub prerelease, alongside any separately prepared Windows assets. Do not reuse the Windows `graild-update.json` format for the Mac ZIP: that updater only installs Windows executables. Mac authenticity is established through Developer ID signing and notarization for this manual-install beta.
+Upload the final ZIP for each architecture and its matching `graild-update-macos-ARCH.json` to the v0.9.1 GitHub prerelease, alongside separately prepared Windows assets. Generate Mac manifests locally with the existing pinned publisher key after final distribution signing/notarization and ZIP creation. Publisher signatures do not replace Apple Developer ID signing and notarization.
 
 ## Mac release acceptance checklist
 
@@ -84,7 +84,7 @@ On **both** Intel and Apple Silicon, using the actual packaged app:
 4. Complete fresh Discord browser consent, close the app, reopen, and confirm persistent login. Check profile and leaderboard loading/sync.
 5. Search Canary, view artwork, match a local recording, filter by era, and check cached metadata while offline.
 6. Quit before manually replacing the app with another identically signed build. Confirm login, profiles, music-folder preferences, settings and Canary cache remain intact outside the bundle.
-7. Confirm Settings reports manual Mac updates and never offers a Windows `.exe`.
+7. Confirm Settings checks for signed Mac updates of the correct architecture and never offers a Windows `.exe`. Test a higher signed version, cancellation, restart/install, and rollback after a failed startup.
 8. Verify Gatekeeper accepts the downloaded notarized artifact. Do not bypass Gatekeeper as a substitute for this release test.
 
 Record Mac model/architecture, macOS version, artifact checksum, and results before calling the Mac release ready. These native checks have not run on this Windows computer.

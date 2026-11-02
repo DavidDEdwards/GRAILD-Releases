@@ -17,6 +17,9 @@ def set_handoff(directory, token):
 
 
 def acknowledge_startup():
+    if sys.platform == 'darwin':
+        from mac_updater import acknowledge_startup as mac_acknowledge
+        return mac_acknowledge(_HANDOFF)
     if sys.platform != "win32" or not getattr(sys, "frozen", False):
         return
     target = Path(sys.executable).resolve()

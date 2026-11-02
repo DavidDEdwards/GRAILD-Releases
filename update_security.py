@@ -94,7 +94,7 @@ def repository(value):
     return value
 
 
-def verify_manifest(envelope, keys, repo, channel, current_version, expected_tag=None):
+def verify_manifest(envelope, keys, repo, channel, current_version, expected_tag=None, *, platform="windows", architecture=None):
     try:
         if not isinstance(envelope, dict) or set(envelope) != {"manifest", "signature", "key_id"}:
             raise UpdateError("Invalid signed release manifest.")
@@ -122,7 +122,14 @@ def verify_manifest(envelope, keys, repo, channel, current_version, expected_tag
             raise UpdateError("Release tag and version do not match.")
         if expected_tag and tag != expected_tag:
             raise UpdateError("Manifest does not belong to this release tag.")
-        if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.+-]{0,120}\.exe", manifest.get("asset", "")):
+        if platform == 'macos':
+            if architecture not in ('arm64', 'x86_64') or manifest.get('platform') != 'macos' or manifest.get('architecture') != architecture:
+                raise UpdateError('This Mac update is for a different platform or architecture.')
+            if manifest.get('asset') != f"GRAILD-{manifest['version']}-macOS-{architecture}.zip" or manifest.get('bundle_id') != 'com.graild.desktop':
+                raise UpdateError('Invalid Mac application asset.')
+            if not re.fullmatch(r'[0-9a-f]{64}', manifest.get('bundle_sha256', '')):
+                raise UpdateError('Missing signed Mac app bundle checksum.')
+        elif platform != 'windows' or manifest.get('platform', 'windows') != 'windows' or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.+-]{0,120}\.exe", manifest.get("asset", "")):
             raise UpdateError("Invalid executable asset name.")
         if not re.fullmatch(r"[0-9a-f]{64}", manifest.get("sha256", "")):
             raise UpdateError("Invalid signed checksum.")

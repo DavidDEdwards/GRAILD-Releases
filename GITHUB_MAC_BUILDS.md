@@ -20,9 +20,9 @@ It checks platform unit tests and compilation, correct Python/FFmpeg architectur
 
 Your friend should test launch, folder selection, both audio modes, Discord login/reopening, Canary metadata/artwork/era filtering, leaderboard loading, and settings persistence. If a build fails, send the failed step's log. If the app fails, send the exact macOS error and their OS version/architecture.
 
-These are **ad-hoc signed test builds, not Developer ID-notarized releases**. macOS Gatekeeper may prevent normal downloaded-app launch. Normal distribution still needs Apple Developer ID signing/notarization as described in MACOS_SUPPORT.md. No Apple or GRAILD private signing secrets are used by this workflow. Windows update manifests are not used for the Mac ZIPs; Mac updates remain manual.
+These are **ad-hoc signed test builds, not Developer ID-notarized releases**. macOS Gatekeeper may prevent normal downloaded-app launch. Normal distribution still needs Apple Developer ID signing/notarization as described in MACOS_SUPPORT.md. No Apple or GRAILD private signing secrets are used by this workflow. Mac updates use separate architecture-specific publisher-signed manifests, generated locally after downloading the final ZIPs. See MAC_AUTO_UPDATES.md.
 
-This workflow has been prepared locally; no remote Actions run or release publication has occurred.
+The 0.9.1 workflow succeeded for Intel and Apple Silicon in [run 41414253452](https://github.com/DavidDEdwards/GRAILD-Releases/actions/runs/41414253452), using commit e4cc5f4. The native app ZIPs were downloaded to `dist/releases/v0.9.1/` and checked locally. No GitHub Release was published by this build step. Developer ID notarization and interactive Mac runtime tests remain pending.
 
 References: https://docs.github.com/en/actions/reference/runners/github-hosted-runners and https://docs.github.com/en/actions/how-tos/manage-workflow-runs/download-workflow-artifacts .
 

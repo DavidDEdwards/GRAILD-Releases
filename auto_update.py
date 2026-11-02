@@ -1,6 +1,7 @@
 """Background GitHub beta updates; only signed release payloads are eligible."""
 import json
 import os
+import platform
 from pathlib import Path
 import secrets
 import shutil
@@ -40,6 +41,8 @@ def validate_asset_url(url, repo, tag, asset):
 
 class UpdateManager:
     def __init__(self, root=None, keys=None, session=None):
+        self.platform = 'macos' if sys.platform == 'darwin' else 'windows'
+        self.architecture = platform.machine() if self.platform == 'macos' else None
         self.root = Path(root) if root else update_root()
         self.root.mkdir(parents=True, exist_ok=True)
         (self.root / "jobs").mkdir(exist_ok=True)
@@ -140,8 +143,8 @@ class UpdateManager:
             response.close()
 
     def check(self, automatic=False):
-        if sys.platform == "darwin":
-            self._state("unsupported", "macOS beta updates are installed manually from github.com/DavidDEdwards/GRAILD-Releases. Windows updates will not be downloaded on this Mac.")
+        if self.platform == 'macos' and self.architecture not in ('arm64', 'x86_64'):
+            self._state('unsupported', 'This Mac architecture is not supported for automatic updates.')
             return self.snapshot()
         with self.lock:
             if automatic and not self.config["automatic"]:
@@ -188,10 +191,13 @@ class UpdateManager:
             for _, release in candidates[:20]:
                 try:
                     assets = {asset["name"]: asset for asset in release.get("assets", [])}
-                    metadata_asset = assets["graild-update.json"]
-                    metadata_url = validate_asset_url(metadata_asset["browser_download_url"], repo, release["tag_name"], "graild-update.json")
+                    metadata_name = f'graild-update-macos-{self.architecture}.json' if self.platform == 'macos' else 'graild-update.json'
+                    if metadata_name not in assets:
+                        continue
+                    metadata_asset = assets[metadata_name]
+                    metadata_url = validate_asset_url(metadata_asset["browser_download_url"], repo, release["tag_name"], metadata_name)
                     envelope = self._json(metadata_url, limit=131072)
-                    manifest = verify_manifest(envelope, self.keys, repo, channel, APP_VERSION, release["tag_name"])
+                    manifest = self._verify_manifest(envelope, repo, channel, release['tag_name'])
                     asset = assets[manifest["asset"]]
                     url = validate_asset_url(asset["browser_download_url"], repo, manifest["tag"], manifest["asset"])
                     with self.lock:
@@ -219,13 +225,17 @@ class UpdateManager:
         threading.Thread(target=self._download_worker, args=(candidate,), name="GRAILD-update-download", daemon=True).start()
         return self.snapshot()
 
+    def _verify_manifest(self, envelope, repo, channel, tag=None):
+        return verify_manifest(envelope, self.keys, repo, channel, APP_VERSION, tag,
+                               platform=self.platform, architecture=self.architecture)
+
     def _download_worker(self, candidate):
         job = self.root / "jobs" / uuid.uuid4().hex
         partial = job / "download.part"
         response = None
         try:
-            job.mkdir()
-            manifest = verify_manifest(candidate["envelope"], self.keys, candidate["repository"], candidate["channel"], APP_VERSION)
+            job.mkdir(mode=0o700)
+            manifest = self._verify_manifest(candidate['envelope'], candidate['repository'], candidate['channel'])
             atomic_json(job / "manifest.json", candidate["envelope"])
             response = self._response(candidate["url"], stream=True)
             received = 0
@@ -240,11 +250,15 @@ class UpdateManager:
                     self._state("downloading", "Downloading update...", downloaded=received)
                 file.flush()
                 os.fsync(file.fileno())
-            self._state("verifying", "Verifying the downloaded executable...")
+            self._state("verifying", "Verifying the downloaded update...")
             verify_file(partial, manifest)
             if self.cancel.is_set():
                 raise Cancelled("Update download cancelled. Your current app is unchanged.")
-            os.replace(partial, job / "payload.exe")
+            if self.platform == 'macos':
+                from mac_update_security import archive_bundle_digest
+                if archive_bundle_digest(partial) != manifest['bundle_sha256']:
+                    raise UpdateError('The Mac archive does not match its signed bundle checksum.')
+            os.replace(partial, job / ('payload.zip' if self.platform == 'macos' else 'payload.exe'))
             with self.lock:
                 self.ready_job = job
             self._state("ready", "Download verified. Ready to restart and install.", downloaded=received)
@@ -262,6 +276,14 @@ class UpdateManager:
         return self.snapshot()
 
     def install(self, helper_source, target=None):
+        if self.platform == 'macos':
+            from mac_updater import prepare_install
+            try:
+                return prepare_install(self)
+            except Exception as error:
+                message = str(error) if isinstance(error, UpdateError) else 'The Mac updater could not prepare safely. The current app was left open.'
+                self._state('error', message)
+                raise UpdateError(message) from error
         from graild_updater import launch
         if os.name != "nt" or not getattr(sys, "frozen", False):
             raise UpdateError("Installation is available in the packaged Windows app. Development mode can check and verify downloads.")
