@@ -80,7 +80,12 @@ class MacArchiveTests(unittest.TestCase):
                  [('GRAILD.app/Contents/link', b'../../../escape', stat.S_IFLNK | 0o777)],
                  [('GRAILD.app/Contents/socket', b'x', stat.S_IFIFO | 0o644)],
                  [('GRAILD.app/Contents/link', b'MacOS', stat.S_IFLNK | 0o777),
-                  ('GRAILD.app/Contents/link/attack', b'x', stat.S_IFREG | 0o644)]]
+                  ('GRAILD.app/Contents/link/attack', b'x', stat.S_IFREG | 0o644)],
+                 [('GRAILD.app/Contents//link', b'MacOS', stat.S_IFLNK | 0o777)],
+                 [('GRAILD.app/Contents/deep/link', b'../../Contents/shallow/../../outside', stat.S_IFLNK | 0o777),
+                  ('GRAILD.app/Contents/shallow', b'../Contents', stat.S_IFLNK | 0o777)],
+                 [('GRAILD.app/Contents/link', b'MacOS', stat.S_IFLNK | 0o777),
+                  ('GRAILD.app/Contents/LINK/attack', b'x', stat.S_IFREG | 0o644)]]
         for extras in cases:
             self.archive.write_bytes(app_zip(extras=extras))
             with self.subTest(extras=extras), self.assertRaises(UpdateError):

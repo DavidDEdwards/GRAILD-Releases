@@ -27,7 +27,7 @@ def archive_bundle_digest(filename):
         for item in archive.infolist():
             name = item.filename
             path = PurePosixPath(name)
-            if '\\' in name or '\x00' in name or path.is_absolute() or any(part in ('..', '.') for part in path.parts) or name.startswith('/'):
+            if '\\' in name or '\x00' in name or path.is_absolute() or str(path) != name.rstrip('/') or any(part in ('..', '.') for part in path.parts) or name.startswith('/'):
                 raise UpdateError('Unsafe path in Mac update archive.')
             if not path.parts or path.parts[0] not in ('GRAILD.app', '__MACOSX'):
                 raise UpdateError('The Mac update must contain only GRAILD.app and its archive metadata.')
@@ -66,10 +66,34 @@ def archive_bundle_digest(filename):
                     for chunk in iter(lambda: source.read(1024 * 1024), b''):
                         digest.update(chunk)
                 records.append((relative, 'file', bool(mode & 0o111), digest.hexdigest()))
+        link_targets = {name.casefold(): target for name, target in links.items()}
+
+        def resolve_parts(parts, seen=frozenset()):
+            resolved = []
+            for part in parts:
+                if part in ('', '.'):
+                    continue
+                if part == '..':
+                    if len(resolved) <= 1:
+                        raise UpdateError('Mac bundle link chain escapes its app.')
+                    resolved.pop()
+                    continue
+                resolved.append(part)
+                key = '/'.join(resolved).casefold()
+                if key in link_targets:
+                    if key in seen or len(seen) > 64:
+                        raise UpdateError('Cyclic Mac bundle link chain.')
+                    resolved = resolve_parts(resolved[:-1] + link_targets[key].split('/'), seen | {key})
+            if not resolved or resolved[0] != 'GRAILD.app':
+                raise UpdateError('Mac bundle link chain escapes its app.')
+            return resolved
+
+        for name in links:
+            resolve_parts(name.split('/'))
         # Extraction must never write through a symbolic-link directory.
         for item in archive.infolist():
             for parent in PurePosixPath(item.filename).parents:
-                if str(parent) in links:
+                if str(parent).casefold() in link_targets:
                     raise UpdateError('Mac archive writes through a symbolic link.')
     names = {record[0] for record in records}
     if not {'Contents/Info.plist', 'Contents/MacOS/GRAILD'} <= names:
