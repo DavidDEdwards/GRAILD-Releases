@@ -5,6 +5,10 @@ on:
     branches: [codex/graild-0.9.2-mac-no-auto-updates]
   workflow_dispatch:
 
+concurrency:
+  group: graild-macos-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
