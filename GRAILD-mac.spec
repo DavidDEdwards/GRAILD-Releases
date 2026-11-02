@@ -35,3 +35,4 @@ app = BUNDLE(coll, name='GRAILD.app', bundle_identifier='com.graild.desktop',
              info_plist={'CFBundleShortVersionString': version, 'CFBundleVersion': version,
                          'NSHighResolutionCapable': True,
                          'NSAppTransportSecurity': {'NSAllowsLocalNetworking': True}})
+
