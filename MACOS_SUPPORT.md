@@ -1,6 +1,6 @@
-# GRAIL'D v0.9.0 macOS support
+# GRAIL'D v0.9.2 macOS support
 
-Status: platform compatibility, native Mac builds, and signed Mac update support are implemented for source version 0.9.1. Native builds run on GitHub-hosted Macs; interactive runtime acceptance and Developer ID notarization remain separate from compilation. Existing signed 0.8.0/0.8.1 release files were not changed.
+Status: platform compatibility, native Mac builds, and signed Mac update support are implemented for source version 0.9.2. Native builds run on GitHub-hosted Macs; interactive runtime acceptance and Developer ID notarization remain separate from compilation. Existing signed 0.8.0/0.8.1 release files were not changed.
 
 ## Changes
 
@@ -10,7 +10,7 @@ Status: platform compatibility, native Mac builds, and signed Mac update support
 - Session and leaderboard tokens are encrypted with a Fernet key kept in the user's macOS login Keychain. The Apple Keychain backend is selected explicitly; no plaintext credential fallback. Windows retains its existing DPAPI and AppData behavior.
 - Keychain may ask the user for permission. A locked/unavailable Keychain returns a sign-in error rather than saving unprotected tokens. Use a stable Developer ID signing identity for releases; changed/ad-hoc identities can cause new Keychain permission prompts.
 - Local music remains in user-selected folders. The app bundles pygame, FFmpeg, Python, webview resources, local CSS and fonts.
-- Mac updates use architecture-specific publisher-signed manifests and ZIPs, with in-app Update Now/Later, independent bundle replacement, startup confirmation and rollback. See MAC_AUTO_UPDATES.md. Older manual-only Mac builds need the new updater-enabled app installed once. Windows automatic updates are retained.
+- Mac builds do not check for updates automatically at startup. Users can still start a check manually in Settings and install a signed update. Windows automatic checks remain enabled. The Mac updater uses architecture-specific publisher-signed manifests and ZIPs, with independent bundle replacement, startup confirmation and rollback; see MAC_AUTO_UPDATES.md.
 
 Accounts and caches are local to each computer. This change does not create cross-device profile synchronization. Friends sign in/create their own accounts on their Mac; the build does not include the publisher's session.
 
@@ -39,8 +39,8 @@ python build_macos.py
 
 This creates one of:
 
-- `dist/releases/v0.9.0/macOS-arm64/GRAILD.app` and `GRAILD-0.9.0-macOS-arm64.zip`
-- `dist/releases/v0.9.0/macOS-x86_64/GRAILD.app` and `GRAILD-0.9.0-macOS-x86_64.zip`
+- `dist/releases/v0.9.2/macOS-arm64/GRAILD.app` and `GRAILD-0.9.2-macOS-arm64.zip`
+- `dist/releases/v0.9.2/macOS-x86_64/GRAILD.app` and `GRAILD-0.9.2-macOS-x86_64.zip`
 
 The builder checks FFmpeg architecture, builds in a unique staging folder, verifies bundle code signing, and refuses to overwrite an existing output directory. Without a Developer ID identity, PyInstaller uses ad-hoc signing for local testing. **An ad-hoc test build is not a notarized distribution release.** No release is uploaded automatically.
 
@@ -60,19 +60,19 @@ Archive an existing output folder before rebuilding. Do not overwrite a running 
 Configure an Apple notarytool Keychain profile locally using Apple's instructions; never commit credentials. With a configured profile called `GRAILD-notary`, submit the generated ZIP (substitute `x86_64` on Intel):
 
 ```bash
-xcrun notarytool submit dist/releases/v0.9.0/macOS-arm64/GRAILD-0.9.0-macOS-arm64.zip --keychain-profile GRAILD-notary --wait
-xcrun stapler staple dist/releases/v0.9.0/macOS-arm64/GRAILD.app
-codesign --verify --deep --strict --verbose=2 dist/releases/v0.9.0/macOS-arm64/GRAILD.app
-spctl --assess --type execute --verbose=2 dist/releases/v0.9.0/macOS-arm64/GRAILD.app
+xcrun notarytool submit dist/releases/v0.9.2/macOS-arm64/GRAILD-0.9.2-macOS-arm64.zip --keychain-profile GRAILD-notary --wait
+xcrun stapler staple dist/releases/v0.9.2/macOS-arm64/GRAILD.app
+codesign --verify --deep --strict --verbose=2 dist/releases/v0.9.2/macOS-arm64/GRAILD.app
+spctl --assess --type execute --verbose=2 dist/releases/v0.9.2/macOS-arm64/GRAILD.app
 ```
 
 After successful notarization/stapling, re-create the ZIP from the stapled bundle so friends receive the ticket:
 
 ```bash
-ditto -c -k --sequesterRsrc --keepParent dist/releases/v0.9.0/macOS-arm64/GRAILD.app dist/releases/v0.9.0/macOS-arm64/GRAILD-0.9.0-macOS-arm64-notarized.zip
+ditto -c -k --sequesterRsrc --keepParent dist/releases/v0.9.2/macOS-arm64/GRAILD.app dist/releases/v0.9.2/macOS-arm64/GRAILD-0.9.2-macOS-arm64-notarized.zip
 ```
 
-Upload the final ZIP for each architecture and its matching `graild-update-macos-ARCH.json` to the v0.9.1 GitHub prerelease, alongside separately prepared Windows assets. Generate Mac manifests locally with the existing pinned publisher key after final distribution signing/notarization and ZIP creation. Publisher signatures do not replace Apple Developer ID signing and notarization.
+Upload the final ZIP for each architecture and its matching `graild-update-macos-ARCH.json` to the v0.9.2 GitHub prerelease, alongside separately prepared Windows assets. Generate Mac manifests locally with the existing pinned publisher key after final distribution signing/notarization and ZIP creation. Publisher signatures do not replace Apple Developer ID signing and notarization.
 
 ## Mac release acceptance checklist
 
@@ -88,3 +88,4 @@ On **both** Intel and Apple Silicon, using the actual packaged app:
 8. Verify Gatekeeper accepts the downloaded notarized artifact. Do not bypass Gatekeeper as a substitute for this release test.
 
 Record Mac model/architecture, macOS version, artifact checksum, and results before calling the Mac release ready. These native checks have not run on this Windows computer.
+
