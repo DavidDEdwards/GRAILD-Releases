@@ -118,6 +118,20 @@ class MacArchiveTests(unittest.TestCase):
         self.assertEqual(manager.snapshot()['status'],'error')
         self.assertIsNone(manager.ready_job)
 
+    def test_cancel_during_mac_bundle_verification_never_marks_download_ready(self):
+        envelope, keys = signed_mac(self.archive)
+        with patch('auto_update.sys.platform','darwin'), patch('auto_update.platform.machine',return_value='arm64'):
+            manager = UpdateManager(root=self.root/'cancel-updates',keys=keys,session=Mock())
+        manager._response = Mock()
+        manager._response.return_value.iter_content.return_value = [self.archive.read_bytes()]
+        def cancel(_path):
+            manager.cancel.set()
+            return envelope['manifest']['bundle_sha256']
+        with patch('mac_update_security.archive_bundle_digest',side_effect=cancel):
+            manager._download_worker({'envelope':envelope,'repository':'example/graild','channel':'beta','url':'https://github.com/test'})
+        self.assertEqual(manager.snapshot()['status'],'cancelled')
+        self.assertIsNone(manager.ready_job)
+
 
 @unittest.skipUnless(sys.platform == 'darwin', 'Native ditto, file modes and bundle transactions require macOS')
 class NativeMacTransactionTests(unittest.TestCase):
@@ -151,9 +165,18 @@ class NativeMacTransactionTests(unittest.TestCase):
         mac_updater.install_job(self.job,keys=self.keys,parent_factory=lambda *args:self.parent,
                                startup=startup,bundle_verifier=self.verifier)
 
-    def test_native_process_identity_matches_running_executable(self):
-        import os
-        self.assertEqual(mac_updater.process_path(os.getpid()),Path(sys.executable).resolve())
+    def test_native_process_identity_resolves_native_child(self):
+        import subprocess, time
+        process = subprocess.Popen(['/bin/sleep','10'])
+        try:
+            deadline = time.monotonic() + 5
+            actual = None
+            while not actual and time.monotonic() < deadline:
+                actual = mac_updater.process_path(process.pid)
+                time.sleep(0.02)
+            self.assertTrue(actual and actual.samefile('/bin/sleep'))
+        finally:
+            process.terminate(); process.wait(timeout=10)
 
     def test_native_bundle_replacement_preserves_backup_and_file_modes(self):
         def startup(target,job,token,version):

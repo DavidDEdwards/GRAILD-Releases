@@ -258,6 +258,8 @@ class UpdateManager:
                 from mac_update_security import archive_bundle_digest
                 if archive_bundle_digest(partial) != manifest['bundle_sha256']:
                     raise UpdateError('The Mac archive does not match its signed bundle checksum.')
+            if self.cancel.is_set():
+                raise Cancelled('Update download cancelled. Your current app is unchanged.')
             os.replace(partial, job / ('payload.zip' if self.platform == 'macos' else 'payload.exe'))
             with self.lock:
                 self.ready_job = job
