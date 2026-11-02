@@ -21,7 +21,7 @@ from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 from app_version import APP_VERSION
 from auto_update import UpdateManager
 import mac_updater
-from mac_update_security import archive_bundle_digest, bundle_digest, verify_bundle, BUNDLE_ID
+from mac_update_security import archive_bundle_digest, bundle_digest, verify_bundle, macho_architectures, BUNDLE_ID
 from update_security import UpdateError, atomic_json, canonical, verify_manifest
 
 
@@ -72,6 +72,25 @@ class MacArchiveTests(unittest.TestCase):
         envelope['manifest']['bundle_sha256'] = '0' * 64
         with self.assertRaises(UpdateError):
             verify_manifest(envelope, keys, 'example/graild', 'beta', APP_VERSION, platform='macos', architecture='arm64')
+
+    def test_architecture_checks_do_not_require_developer_tools(self):
+        import struct
+        binary=self.root/'GRAILD'
+        binary.write_bytes(b'\xcf\xfa\xed\xfe'+struct.pack('<I',0x0100000c))
+        self.assertEqual(macho_architectures(binary),{'arm64'})
+        binary.write_bytes(b'\xcf\xfa\xed\xfe'+struct.pack('<I',0x01000007))
+        self.assertEqual(macho_architectures(binary),{'x86_64'})
+        binary.write_bytes(b'not a MachO executable')
+        with self.assertRaises(UpdateError): macho_architectures(binary)
+
+    def test_universal_macho_architectures_are_bounded(self):
+        import struct
+        binary=self.root/'GRAILD'
+        binary.write_bytes(b'\xca\xfe\xba\xbe'+struct.pack('>I',2)+
+                           struct.pack('>IIIII',0x01000007,0,0,0,0)+struct.pack('>IIIII',0x0100000c,0,0,0,0))
+        self.assertEqual(macho_architectures(binary),{'arm64','x86_64'})
+        binary.write_bytes(b'\xca\xfe\xba\xbe'+struct.pack('>I',100))
+        with self.assertRaises(UpdateError): macho_architectures(binary)
 
     def test_traversal_external_links_special_files_and_writes_through_links_rejected(self):
         cases = [[('../escape', b'x', stat.S_IFREG | 0o644)],
@@ -136,6 +155,26 @@ class MacArchiveTests(unittest.TestCase):
             manager._download_worker({'envelope':envelope,'repository':'example/graild','channel':'beta','url':'https://github.com/test'})
         self.assertEqual(manager.snapshot()['status'],'cancelled')
         self.assertIsNone(manager.ready_job)
+
+    def test_preparation_timeout_stops_helper_before_parent_can_close(self):
+        envelope, keys = signed_mac(self.archive)
+        with patch('auto_update.sys.platform','darwin'), patch('auto_update.platform.machine',return_value='arm64'):
+            manager = UpdateManager(root=self.root/'timeout-updates',keys=keys,session=Mock())
+        manager.config.update(repository='example/graild',channel='beta')
+        job=manager.root/'jobs'/uuid.uuid4().hex; job.mkdir()
+        (job/'payload.zip').write_bytes(self.archive.read_bytes()); atomic_json(job/'manifest.json',envelope)
+        manager.ready_job=job; manager.candidate={'manifest':envelope['manifest']}; manager.state['status']='ready'
+        target=self.root/'GRAILD.app'; target.mkdir(); (target/'original').write_bytes(b'old app')
+        process=Mock(); process.poll.return_value=None
+        with patch('update_security.update_root',return_value=manager.root), \
+             patch('mac_updater.sys.platform','darwin'), patch('mac_updater.sys.frozen',True,create=True), \
+             patch('mac_updater.app_bundle',return_value=target), patch('mac_updater.validate_target',return_value=target), \
+             patch('mac_updater.bundle_digest',return_value='0'*64), patch('mac_updater.copy_bundle'), \
+             patch('mac_updater.subprocess.run'), patch('mac_updater.launch',return_value=process), \
+             patch('mac_updater.time.monotonic',side_effect=[0,61]), self.assertRaises(UpdateError):
+            mac_updater.prepare_install(manager)
+        process.terminate.assert_called_once()
+        self.assertEqual((target/'original').read_bytes(),b'old app')
 
 
 @unittest.skipUnless(sys.platform == 'darwin', 'Native ditto, file modes and bundle transactions require macOS')

@@ -5,6 +5,7 @@ from pathlib import Path, PurePosixPath
 import plistlib
 import posixpath
 import stat
+import struct
 import subprocess
 import zipfile
 
@@ -141,8 +142,34 @@ def verify_bundle(bundle, manifest, *, codesign=True):
             raise UpdateError('The Mac update has invalid application metadata.')
         if codesign:
             subprocess.run(['/usr/bin/codesign', '--verify', '--deep', '--strict', str(bundle)], check=True, capture_output=True, timeout=60)
-            architectures = subprocess.check_output(['/usr/bin/lipo', '-archs', str(executable)], text=True, timeout=20).split()
-            if manifest['architecture'] not in architectures:
+            if manifest['architecture'] not in macho_architectures(executable):
                 raise UpdateError('The Mac update executable has the wrong architecture.')
     except (OSError, ValueError, subprocess.SubprocessError) as error:
         raise UpdateError('The Mac app signature or executable could not be verified.') from error
+
+
+def macho_architectures(filename):
+    """Read CPU headers directly; updating must not require Xcode or lipo."""
+    with Path(filename).open('rb') as source:
+        header = source.read(8)
+        if len(header) != 8:
+            raise UpdateError('Invalid Mac executable header.')
+        magic = header[:4]
+        cpus = []
+        if magic in (b'\xcf\xfa\xed\xfe', b'\xce\xfa\xed\xfe', b'\xfe\xed\xfa\xcf', b'\xfe\xed\xfa\xce'):
+            endian = '<' if magic[0] in (0xcf, 0xce) else '>'
+            cpus.append(struct.unpack(endian+'I', header[4:])[0])
+        elif magic in (b'\xca\xfe\xba\xbe', b'\xca\xfe\xba\xbf', b'\xbe\xba\xfe\xca', b'\xbf\xba\xfe\xca'):
+            endian = '>' if magic[0] == 0xca else '<'
+            count = struct.unpack(endian+'I', header[4:])[0]
+            if not 1 <= count <= 16:
+                raise UpdateError('Invalid universal Mac executable header.')
+            size = 32 if magic in (b'\xca\xfe\xba\xbf', b'\xbf\xba\xfe\xca') else 20
+            for _ in range(count):
+                entry = source.read(size)
+                if len(entry) != size:
+                    raise UpdateError('Truncated universal Mac executable.')
+                cpus.append(struct.unpack(endian+'I', entry[:4])[0])
+        else:
+            raise UpdateError('The update is not a Mac executable.')
+    return {name for cpu, name in ((0x01000007,'x86_64'),(0x0100000c,'arm64')) if cpu in cpus}

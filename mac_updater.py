@@ -270,6 +270,11 @@ def prepare_install(manager):
             raise UpdateError(strict_json((job / 'result.json').read_bytes()).get('message', 'Mac updater preparation failed.'))
         if process.poll() is not None: break
         time.sleep(0.1)
+    if process.poll() is None:
+        process.terminate()
+        try: process.wait(timeout=10)
+        except subprocess.TimeoutExpired: process.kill(); process.wait(timeout=10)
+    atomic_json(job / 'result.json', {'status':'failed','message':'Mac updater preparation timed out; the current app was left open.'})
     raise UpdateError('The Mac updater did not become ready. Your app was left open; retry the download.')
 
 
