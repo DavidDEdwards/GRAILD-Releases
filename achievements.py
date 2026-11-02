@@ -2,6 +2,19 @@
 
 ACHIEVEMENTS = []
 
+PROFILE_TAGS = {
+    "owner": {"id": "owner", "name": "Owner / Creator", "kind": "assigned",
+              "description": "Verified owner / creator of GRAIL'D."},
+    "beta_tester": {
+        "id": "beta_tester", "name": "Beta Tester", "kind": "assigned",
+        "description": "Awarded by the owner for helping beta test GRAIL'D.",
+    },
+    "top_earner": {
+        "id": "top_earner", "name": "Top earner", "kind": "earned",
+        "description": "Unlocked all 50 achievements.",
+    },
+}
+
 def milestones(category, metric, targets, names, requirement):
     for target, name in zip(targets, names):
         ACHIEVEMENTS.append({"id": f"{metric}_{target}", "name": name,

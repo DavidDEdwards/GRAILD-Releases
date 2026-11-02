@@ -4,11 +4,27 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>JuiceSpot - Unreleased Grail Hub</title>
+    <link rel="icon" type="image/png" href="assets/graild-logo.png">
     <link href="assets/tailwind.css" rel="stylesheet">
     <link href="assets/fonts.css" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #0d0d12; color: #ffffff; }
         dialog::backdrop { background: rgba(0,0,0,.75); }
+        .app-brand { display: flex; align-items: center; gap: 12px; }
+        .app-brand-logo { width: 64px; height: 64px; object-fit: contain; flex-shrink: 0; border-radius: 14px; }
+        .game-nav { position: relative; display: flex; align-items: center; }
+        .game-nav-menu { position: absolute; top: 100%; left: 0; min-width: 230px; padding-top: 8px; z-index: 60; }
+        .game-nav-menu[hidden] { display: none; }
+        .game-nav-panel { padding: 8px; border: 1px solid #334155; border-radius: 16px; background: #181824; box-shadow: 0 12px 30px #0008; }
+        .game-nav-panel button { display: block; width: 100%; padding: 12px; border-radius: 10px; text-align: left; font-size: 12px; font-weight: 700; }
+        .game-nav-panel button:hover, .game-nav-panel button:focus-visible { background: #312e48; }
+        .game-nav-panel button[aria-checked="true"] { color: #c4b5fd; background: #27213e; }
+        .profile-tag { position: relative; display: inline-block; border: 1px solid #64748b; border-radius: 999px; padding: 4px 10px; color: #e2e8f0; background: #1e1e2f; font-size: 11px; font-weight: 800; cursor: help; }
+        .profile-tag[data-kind="earned"] { border-color: #a855f7; color: #e9d5ff; }
+        .profile-tag[data-kind="assigned"] { border-color: #22d3ee; color: #a5f3fc; }
+        .profile-tag:focus-visible { outline: 2px solid #22d3ee; outline-offset: 3px; }
+        .tag-tooltip { display: none; position: absolute; z-index: 20; top: calc(100% + 8px); left: 0; width: min(260px, 65vw); padding: 10px 12px; border: 1px solid #475569; border-radius: 10px; background: #0d0d12; color: #e2e8f0; font-size: 12px; font-weight: 400; line-height: 1.5; box-shadow: 0 8px 24px #0008; }
+        .profile-tag:hover .tag-tooltip, .profile-tag:focus .tag-tooltip { display: block; }
         .glow-purple { text-shadow: 0 0 20px rgba(168, 85, 247, 0.5); }
         .glow-cyan { text-shadow: 0 0 20px rgba(6, 182, 212, 0.5); }
         .glass-card { background: rgba(24, 24, 36, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(34, 211, 238, 0.2); }
@@ -28,13 +44,27 @@
     <!-- TOP NAVIGATION & HEADER -->
     <header class="w-full border-b border-slate-800 bg-[#0d0d12]/90 sticky top-0 z-50 backdrop-blur-md">
         <div class="max-w-7xl mx-auto px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
-            <div>
+            <div class="app-brand">
+                <img id="app-logo" class="app-brand-logo" src="assets/graild-logo.png" alt="GRAIL'D crowned G logo" width="64" height="64">
+                <div>
                 <h1 class="text-3xl font-black italic tracking-wider text-purple-500 glow-purple">Grail'd</h1>
                 <p class="text-xs text-cyan-400 font-semibold tracking-wide">- Powered by Canary</p>
                 <p class="text-[11px] text-slate-400 italic mt-0.5">made by ⁹⁹⁹DAVID⁹⁹⁹</p>
+                </div>
             </div>
             <nav class="flex flex-wrap items-center justify-center gap-3 bg-[#181824] p-1.5 rounded-full border border-slate-800 shadow-inner">
                 <button onclick="switchTab('hub')" id="btn-hub" class="px-5 py-2 rounded-full text-xs font-bold transition-all bg-purple-600 text-white shadow-lg">Hub</button>
+                <div id="game-nav" class="game-nav" onmouseenter="setGameMenu(true)" onmouseleave="setGameMenu(false)" onkeydown="handleGameMenuKey(event)" onfocusout="if (!this.contains(event.relatedTarget)) setGameMenu(false)">
+                    <button onclick="switchTab('game'); setGameMenu(false)" id="btn-game" class="px-5 py-2 rounded-full text-xs font-bold transition-all text-slate-400 hover:text-white">Game</button>
+                    <button id="game-menu-toggle" type="button" onclick="setGameMenu(document.getElementById('game-mode-menu').hidden)" aria-label="Choose a game mode" aria-haspopup="menu" aria-expanded="false" aria-controls="game-mode-menu" class="px-2 py-2 rounded-full text-xs text-slate-400">&#9662;</button>
+                    <div id="game-mode-menu" class="game-nav-menu" hidden>
+                        <div class="game-nav-panel" role="menu" aria-label="Game modes">
+                            <button id="nav-mode-classic" type="button" role="menuitemradio" aria-checked="true" onclick="chooseNavGameMode('classic')">Classic Snippets</button>
+                            <button id="nav-mode-random" type="button" role="menuitemradio" aria-checked="false" onclick="chooseNavGameMode('random')">Random Drop</button>
+                            <p class="px-3 py-2 text-xs text-slate-400">Changing modes starts a fresh round.</p>
+                        </div>
+                    </div>
+                </div>
                 <button onclick="switchTab('catalog')" id="btn-catalog" class="px-5 py-2 rounded-full text-xs font-bold transition-all text-slate-400 hover:text-white">Catalog</button>
                 <button onclick="switchTab('leaderboard')" id="btn-leaderboard" class="px-5 py-2 rounded-full text-xs font-bold transition-all text-slate-400 hover:text-white">Leaderboard</button>
                 <button onclick="switchTab('settings')" id="btn-settings" class="px-5 py-2 rounded-full text-xs font-bold transition-all text-slate-400 hover:text-white">Settings</button>
@@ -115,6 +145,7 @@
         <!-- GAME PANEL: opened from Hub game tiles -->
         <section id="tab-game" class="hidden max-w-2xl mx-auto space-y-6">
             <button type="button" onclick="switchTab('hub')" class="text-sm font-bold text-slate-400 hover:text-white">&larr; All games</button>
+            <p id="game-resume-status" class="text-xs text-slate-400" role="status">Your current round saves automatically. Return here to resume it.</p>
             <div class="glass-card rounded-3xl p-8 border border-cyan-500/30 space-y-6">
                 <div class="flex justify-between items-center">
                     <div>
@@ -171,7 +202,7 @@
                 <div id="input-area" class="space-y-3 relative">
                     <input type="text" id="guess-input" placeholder="Type song title..." oninput="handleTyping(event)" class="w-full bg-[#0d0d12] border border-slate-700 rounded-xl px-4 py-3.5 text-white focus:outline-none focus:border-cyan-400 transition-all font-medium text-sm">
                     <div id="suggestions" class="hidden absolute left-0 right-0 top-full mt-1 bg-[#12121c] border border-slate-800 rounded-xl overflow-hidden shadow-2xl z-20"></div>
-                    
+
                     <div class="flex gap-3 pt-2">
                         <button onclick="submitGuess()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition-all cursor-pointer text-sm shadow-lg">SUBMIT</button>
                         <button onclick="skipAttempt()" class="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold py-3 rounded-xl transition-all cursor-pointer text-sm">SKIP / +1s</button>
@@ -331,7 +362,8 @@
                     <div class="min-w-0 flex-1">
                         <div class="flex flex-wrap items-center gap-2">
                             <h2 id="profile-display-name" class="break-words text-xl font-bold text-white"></h2>
-                            <span id="profile-owner-tag" class="hidden rounded-full border border-amber-400/40 bg-amber-400/10 px-2.5 py-1 text-[10px] font-black uppercase text-amber-300">Owner / Creator</span>
+                            <span id="profile-owner-tag" tabindex="0" title="Verified owner / creator of GRAIL'D." class="hidden rounded-full border border-amber-400/40 bg-amber-400/10 px-2.5 py-1 text-[10px] font-black uppercase text-amber-300">Owner / Creator</span>
+                            <div id="profile-tags" class="flex flex-wrap gap-2" aria-label="Account tags"></div>
                         </div>
                         <p id="profile-username" class="break-all text-sm text-cyan-400"></p>
                         <p id="profile-created" class="mt-1 text-xs text-slate-500"></p>
@@ -347,6 +379,49 @@
                     <div class="rounded-xl bg-[#0d0d12] p-3"><p class="text-xs text-slate-500">Best streak</p><p id="profile-best-streak" class="mt-1 text-lg font-bold text-orange-300">0</p></div>
                     <div class="rounded-xl bg-[#0d0d12] p-3"><p class="text-xs text-slate-500">Songs played</p><p id="profile-songs-played" class="mt-1 text-lg font-bold text-slate-200">0</p></div>
                     <div class="rounded-xl bg-[#0d0d12] p-3"><p class="text-xs text-slate-500">Grails collected</p><p id="profile-grails" class="mt-1 text-lg font-bold text-cyan-300">0</p></div>
+                </div>
+                <div class="space-y-3 border-t border-slate-800 pt-5">
+                    <h3 class="text-sm font-bold">Account tags</h3>
+                    <p class="text-xs text-slate-400">Tags follow your verified Discord or Google sign-in across devices. Use the same sign-in provider to recognize the same global account.</p>
+                    <p id="global-tags-status" class="text-xs text-cyan-300" role="status"></p>
+                    <p id="global-player-id" class="break-all text-xs text-slate-500"></p>
+                    <button type="button" onclick="refreshGlobalTags(globalTagGeneration)" class="text-xs font-bold text-cyan-400">Refresh global tags</button>
+                    <p class="text-xs text-slate-400">Hover over a tag or focus it to see how it was obtained. Earned tags stay unlocked.</p>
+                    <p id="top-earner-progress" class="text-sm text-purple-300" role="status"></p>
+                    <div id="tag-management" class="hidden space-y-3 rounded-xl bg-[#0d0d12] p-4">
+                        <h4 class="text-sm font-bold text-cyan-300">Manage tags</h4>
+                        <form onsubmit="event.preventDefault(); createCustomTag()" class="space-y-3">
+                            <label class="block text-sm text-slate-300">New tag name
+                                <input id="custom-tag-name" maxlength="32" required placeholder="e.g. Contributor" class="mt-2 w-full rounded-lg border border-slate-700 bg-[#0d0d12] px-3 py-2 text-white">
+                            </label>
+                            <label class="block text-sm text-slate-300">Hover description
+                                <input id="custom-tag-description" maxlength="240" required placeholder="Why this person received the tag" class="mt-2 w-full rounded-lg border border-slate-700 bg-[#0d0d12] px-3 py-2 text-white">
+                            </label>
+                            <button id="custom-tag-create" type="submit" class="rounded-lg bg-purple-600 px-4 py-2 text-sm font-bold">Create custom tag</button>
+                        </form>
+                        <label class="block text-sm text-slate-300">Tag to assign or remove
+                            <select id="tag-definition-select" onchange="selectedTagId=this.value" class="mt-2 w-full rounded-lg border border-slate-700 bg-[#0d0d12] px-3 py-2 text-white"><option value="beta_tester">Beta Tester</option></select>
+                        </label>
+                        <form onsubmit="event.preventDefault(); assignDiscordTesterTag(true)" class="space-y-3">
+                            <label class="block text-sm text-slate-300">Discord user ID or mention
+                                <input id="tag-discord-id" type="text" maxlength="30" placeholder="Numeric Discord ID or &lt;@ID&gt;" required class="mt-2 w-full rounded-lg border border-slate-700 bg-[#0d0d12] px-3 py-2 text-white">
+                            </label>
+                            <p class="text-xs text-slate-400">Use their numeric ID or paste a Discord mention. Tags can be assigned before their first sign-in and will follow that Discord account.</p>
+                            <div class="flex flex-wrap gap-2">
+                                <button id="discord-tag-assign" type="submit" class="rounded-lg bg-purple-600 px-4 py-2 text-sm font-bold">Assign by Discord</button>
+                                <button id="discord-tag-remove" type="button" onclick="assignDiscordTesterTag(false)" class="rounded-lg border border-slate-700 px-4 py-2 text-sm font-bold">Remove by Discord</button>
+                            </div>
+                        </form>
+                        <p class="text-xs text-slate-400">Choose a registered player, or use their Discord ID above. Only the verified owner can create and assign custom tags. Owner and earned tags are protected.</p>
+                        <label class="block text-sm text-slate-300">Account
+                            <select id="tag-account-select" class="mt-2 w-full rounded-lg border border-slate-700 bg-[#0d0d12] px-3 py-2 text-white"></select>
+                        </label>
+                        <div class="flex flex-wrap gap-2">
+                            <button id="tag-assign-button" type="button" onclick="assignTesterTag(true)" class="rounded-lg bg-purple-600 px-4 py-2 text-sm font-bold">Assign tag</button>
+                            <button id="tag-remove-button" type="button" onclick="assignTesterTag(false)" class="rounded-lg border border-slate-700 px-4 py-2 text-sm font-bold">Remove tag</button>
+                        </div>
+                        <p id="tag-management-status" class="text-xs text-cyan-300" role="status"></p>
+                    </div>
                 </div>
                 <div class="space-y-3 border-t border-slate-800 pt-5">
                     <h3 class="text-sm font-bold">Your game preferences</h3>
@@ -459,7 +534,7 @@
             tabIds.forEach(id => {
                 document.getElementById('tab-' + id).classList.toggle('hidden', id !== tabId);
                 const navButton = document.getElementById('btn-' + id);
-                if (navButton) navButton.className = id === tabId || (tabId === 'game' && id === 'hub')
+                if (navButton) navButton.className = id === tabId
                     ? 'px-5 py-2 rounded-full text-xs font-bold transition-all bg-purple-600 text-white shadow-lg'
                     : 'px-5 py-2 rounded-full text-xs font-bold transition-all text-slate-400 hover:text-white';
             });
@@ -488,10 +563,16 @@
         }
 
         function renderAccountState(authState) {
+            const globalGeneration = ++globalTagGeneration;
+            tagAccountRequest += 1;
             const signedIn = authState.authenticated === true && authState.profile;
+            globalTagCanManage = Boolean(signedIn && authState.profile.is_creator);
             document.getElementById('auth-card').classList.toggle('hidden', Boolean(signedIn));
             document.getElementById('profile-card').classList.toggle('hidden', !signedIn);
             if (!signedIn) {
+                document.getElementById('profile-tags').replaceChildren();
+                document.getElementById('tag-management').classList.add('hidden');
+                document.getElementById('tag-account-select').replaceChildren();
                 showAuthForm('signin');
                 switchAccountTab('profile');
                 achievementState = {entries: [], unlocked: 0, total: 50};
@@ -504,6 +585,10 @@
             document.getElementById('profile-avatar').textContent = profile.avatar;
             document.getElementById('profile-display-name').textContent = profile.display_name;
             document.getElementById('profile-owner-tag').classList.toggle('hidden', !profile.is_creator);
+            renderProfileTags(profile.tags || []);
+            document.getElementById('tag-management').classList.toggle('hidden', !profile.is_creator);
+            if (profile.is_creator) loadTagAccounts();
+            else document.getElementById('tag-account-select').replaceChildren();
             document.getElementById('profile-username').textContent = `@${profile.username}`;
             document.getElementById('profile-created').textContent = `Member since ${new Date(profile.created_at).toLocaleDateString()}`;
             document.getElementById('profile-connected-providers').textContent = profile.linked_providers.length
@@ -519,6 +604,187 @@
             document.getElementById('profile-grails').textContent = profile.grails_collected;
             document.getElementById('profile-edit-name').value = profile.display_name;
             document.getElementById('profile-edit-avatar').value = profile.avatar;
+            document.getElementById('global-player-id').textContent = profile.global_player_id ? `Global account: ${profile.global_player_id}` : '';
+            refreshGlobalTags(globalGeneration);
+        }
+
+        let tagAccountRequest = 0;
+        let globalTagGeneration = 0;
+        let globalTagSyncRequest = 0;
+        let globalTagCanManage = false;
+
+        async function refreshGlobalTags(generation) {
+            const request = ++globalTagSyncRequest;
+            const status = document.getElementById('global-tags-status');
+            status.textContent = 'Syncing global tags...';
+            try {
+                const result = await window.pywebview.api.sync_global_tags();
+                if (generation !== globalTagGeneration || request !== globalTagSyncRequest) return;
+                status.textContent = result.message;
+                if (!result.success) return;
+                globalTagCanManage = result.can_manage_tags === true;
+                renderProfileTags(result.tags || []);
+                document.getElementById('global-player-id').textContent = `Global account: ${result.player_id}`;
+                document.getElementById('profile-owner-tag').classList.toggle('hidden', !result.tags.some(tag => tag.id === 'owner'));
+                document.getElementById('tag-management').classList.toggle('hidden', !result.can_manage_tags);
+                if (result.can_manage_tags) { await loadTagCatalog(); loadTagAccounts(); }
+            } catch (error) {
+                if (generation === globalTagGeneration && request === globalTagSyncRequest) status.textContent = 'Global tags could not be refreshed. Your last synced tags are shown.';
+            }
+        }
+
+        function renderProfileTags(tags) {
+            const container = document.getElementById('profile-tags');
+            container.replaceChildren();
+            for (const tag of tags.filter(item => item.id !== 'owner')) {
+                const badge = document.createElement('span');
+                badge.className = 'profile-tag';
+                badge.dataset.kind = tag.kind;
+                badge.tabIndex = 0;
+                badge.textContent = tag.name;
+                const description = document.createElement('span');
+                description.className = 'tag-tooltip';
+                description.id = `profile-tag-description-${container.children.length}`;
+                description.setAttribute('role', 'tooltip');
+                description.textContent = tag.description;
+                badge.setAttribute('aria-describedby', description.id);
+                badge.append(description);
+                container.append(badge);
+            }
+            const topEarner = tags.some(tag => tag.id === 'top_earner');
+            document.getElementById('top-earner-progress').textContent = topEarner
+                ? 'Top earner unlocked: you earned all 50 achievements.'
+                : achievementState.unlocked === 50 ? 'All 50 achievements unlocked. Sync global tags to recognize Top earner on your account.'
+                : `Top earner: unlock all 50 achievements to earn this tag (${achievementState.unlocked}/50).`;
+        }
+
+        async function loadTagAccounts() {
+            const request = ++tagAccountRequest;
+            const select = document.getElementById('tag-account-select');
+            const previous = select.value;
+            const status = document.getElementById('tag-management-status');
+            select.disabled = true;
+            document.getElementById('tag-assign-button').disabled = true;
+            document.getElementById('tag-remove-button').disabled = true;
+            try {
+                const result = await window.pywebview.api.get_tag_accounts();
+                if (request !== tagAccountRequest) return;
+                select.replaceChildren();
+                if (!result.success) { status.textContent = result.message; return; }
+                for (const account of result.accounts) {
+                    const option = document.createElement('option');
+                    option.value = account.player_id;
+                    option.textContent = `${account.display_name} (${account.provider}, ${account.player_id.slice(0, 8)})${account.beta_tester ? ' — Beta Tester' : ''}`;
+                    option.title = account.player_id;
+                    select.append(option);
+                }
+                if (Array.from(select.options).some(option => option.value === previous)) select.value = previous;
+                select.disabled = !select.options.length;
+                document.getElementById('tag-assign-button').disabled = select.disabled;
+                document.getElementById('tag-remove-button').disabled = select.disabled;
+            } catch (error) {
+                if (request === tagAccountRequest) status.textContent = 'Could not load accounts. Reopen your profile to retry.';
+            }
+        }
+
+        async function assignTesterTag(assigned) {
+            const status = document.getElementById('tag-management-status');
+            const username = document.getElementById('tag-account-select').value;
+            if (!username) return;
+            const request = tagAccountRequest;
+            document.getElementById('tag-assign-button').disabled = true;
+            document.getElementById('tag-remove-button').disabled = true;
+            status.textContent = 'Saving tag...';
+            try {
+                const result = await window.pywebview.api.set_account_tag(username, selectedTagId, assigned);
+                if (request !== tagAccountRequest) return;
+                status.textContent = result.message;
+                if (result.success) renderAccountState(await window.pywebview.api.get_account_state());
+                else await loadTagAccounts();
+            } catch (error) {
+                if (request !== tagAccountRequest) return;
+                status.textContent = 'Could not save the tag. Please retry.';
+                await loadTagAccounts();
+            }
+        }
+
+        async function assignDiscordTesterTag(assigned) {
+            const generation = globalTagGeneration;
+            const status = document.getElementById('tag-management-status');
+            const input = document.getElementById('tag-discord-id');
+            const buttons = [document.getElementById('discord-tag-assign'), document.getElementById('discord-tag-remove')];
+            if (!input.value.trim() || buttons.some(button => button.disabled)) return;
+            buttons.forEach(button => button.disabled = true);
+            status.textContent = 'Saving Discord account tag...';
+            try {
+                const result = await window.pywebview.api.set_discord_account_tag(input.value.trim(), selectedTagId, assigned);
+                if (generation !== globalTagGeneration) return;
+                status.textContent = result.message;
+                if (result.success) { await loadTagAccounts(); await refreshGlobalTags(generation); }
+            } catch (error) {
+                if (generation === globalTagGeneration) status.textContent = 'Could not save the Discord tag. Please retry.';
+            } finally {
+                buttons.forEach(button => button.disabled = false);
+            }
+        }
+
+        async function assignLeaderboardTag(button, playerId, assigned, tagId = selectedTagId) {
+            const generation = globalTagGeneration;
+            const status = document.getElementById('global-status');
+            button.disabled = true;
+            try {
+                const result = await window.pywebview.api.set_account_tag(playerId, tagId, assigned);
+                if (generation !== globalTagGeneration) return;
+                if (result.success) await refreshGlobalLeaderboard();
+                status.textContent = result.message;
+            } catch (error) {
+                if (generation === globalTagGeneration) status.textContent = 'Could not save the tag. Refresh and retry.';
+            } finally { button.disabled = false; }
+        }
+
+        let selectedTagId = 'beta_tester';
+        let assignableTags = [{id:'beta_tester', name:'Beta Tester'}];
+        let tagCatalogRequest = 0;
+
+        async function loadTagCatalog(preferredId = selectedTagId) {
+            const generation = globalTagGeneration;
+            const request = ++tagCatalogRequest;
+            try {
+                const result = await window.pywebview.api.get_tag_catalog();
+                if (generation !== globalTagGeneration || request !== tagCatalogRequest || !result.success || !Array.isArray(result.entries)) return;
+                assignableTags = result.entries;
+                selectedTagId = assignableTags.some(tag => tag.id === preferredId) ? preferredId : 'beta_tester';
+                const select = document.getElementById('tag-definition-select');
+                select.replaceChildren();
+                for (const tag of assignableTags) {
+                    const option = document.createElement('option');
+                    option.value = tag.id; option.textContent = tag.name; option.title = tag.description || '';
+                    select.append(option);
+                }
+                select.value = selectedTagId;
+            } catch (error) { /* Existing assigned tags remain usable if the catalog is offline. */ }
+        }
+
+        async function createCustomTag() {
+            const generation = globalTagGeneration;
+            const button = document.getElementById('custom-tag-create');
+            if (button.disabled) return;
+            button.disabled = true;
+            const status = document.getElementById('tag-management-status');
+            try {
+                const result = await window.pywebview.api.create_custom_tag(
+                    document.getElementById('custom-tag-name').value.trim(),
+                    document.getElementById('custom-tag-description').value.trim());
+                if (generation !== globalTagGeneration) return;
+                status.textContent = result.message;
+                if (result.success) {
+                    await loadTagCatalog(result.tag.id);
+                    document.getElementById('custom-tag-name').value = '';
+                    document.getElementById('custom-tag-description').value = '';
+                }
+            } catch (error) {
+                if (generation === globalTagGeneration) status.textContent = 'Could not create the custom tag. Please retry.';
+            } finally { button.disabled = false; }
         }
 
         function switchAccountTab(tab) {
@@ -694,9 +960,15 @@
         }
 
         function renderState(state) {
+            document.getElementById('game-resume-status').textContent = state.resume_error
+                ? 'Could not save this round. Keep the app open and try again before closing.'
+                : 'Your current round saves automatically. Return here to resume it.';
             appState = state;
             resetSnippetButton();
             const randomMode = state.game_mode === 'random';
+            for (const mode of ['classic', 'random']) {
+                document.getElementById('nav-mode-' + mode).setAttribute('aria-checked', String(mode === state.game_mode));
+            }
             document.getElementById('game-mode-title').textContent = randomMode ? 'Random Drop' : 'Classic Snippets';
             document.getElementById('game-mode-description').textContent = randomMode
                 ? 'A random starting point, with longer previews each attempt.'
@@ -753,6 +1025,50 @@
             }
         }
 
+        let changingGameMode = false;
+
+        function setGameMenu(open) {
+            document.getElementById('game-mode-menu').hidden = !open;
+            document.getElementById('game-menu-toggle').setAttribute('aria-expanded', String(open));
+        }
+
+        function handleGameMenuKey(event) {
+            if (event.key === 'Escape') {
+                event.preventDefault(); setGameMenu(false);
+                document.getElementById('game-menu-toggle').focus();
+            } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                event.preventDefault(); setGameMenu(true);
+                const items = Array.from(document.querySelectorAll('#game-mode-menu button'));
+                const index = items.indexOf(document.activeElement);
+                const next = index < 0 ? (event.key === 'ArrowDown' ? 0 : items.length - 1)
+                    : (index + (event.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length;
+                items[next].focus();
+            }
+        }
+
+        async function chooseNavGameMode(mode) {
+            setGameMenu(false);
+            if (!appState || !appState.authenticated) { await startGameMode(mode); return; }
+            await changeGameMode(mode);
+            switchTab('game');
+        }
+
+        document.addEventListener('pointerdown', event => {
+            if (!document.getElementById('game-nav').contains(event.target)) setGameMenu(false);
+        });
+
+        async function changeGameMode(mode) {
+            if (changingGameMode || !appState || mode === appState.game_mode) return;
+            changingGameMode = true;
+            document.querySelectorAll('#game-mode-menu button').forEach(button => button.disabled = true);
+            try {
+                await startGameMode(mode);
+            } finally {
+                changingGameMode = false;
+                document.querySelectorAll('#game-mode-menu button').forEach(button => button.disabled = false);
+            }
+        }
+
         async function startGameMode(mode) {
             if (!appState || !appState.authenticated) {
                 switchTab('account');
@@ -763,6 +1079,7 @@
             try {
                 const state = await window.pywebview.api.set_game_mode(mode);
                 renderState(state);
+                resetSnippetButton();
                 document.getElementById('guess-input').value = '';
                 document.getElementById('suggestions').classList.add('hidden');
                 document.getElementById('cover-container').classList.add('hidden');
@@ -771,6 +1088,7 @@
                 switchTab('game');
             } catch (error) {
                 message.textContent = 'Could not start the game. Please try again.';
+                showFeedback(message.textContent);
             }
         }
 
@@ -908,13 +1226,19 @@
             const status = document.getElementById('global-status');
             const list = document.getElementById('global-leaderboard');
             status.textContent = 'Loading global rankings...';
+            const generation = globalTagGeneration;
             try {
+                const permissions = await window.pywebview.api.sync_global_tags();
+                if (generation !== globalTagGeneration) return;
+                globalTagCanManage = permissions.success === true && permissions.can_manage_tags === true;
+                if (globalTagCanManage) await loadTagCatalog();
                 const result = await window.pywebview.api.get_global_leaderboard();
+                if (generation !== globalTagGeneration) return;
                 list.replaceChildren();
                 status.textContent = result.message;
                 for (const entry of result.entries || []) {
                     const row = document.createElement('div');
-                    row.className = 'flex items-center justify-between gap-4 rounded-xl bg-[#0d0d12] p-4 text-sm';
+                    row.className = 'flex flex-wrap items-center justify-between gap-4 rounded-xl bg-[#0d0d12] p-4 text-sm';
                     const name = document.createElement('span');
                     name.className = 'min-w-0 break-words font-bold';
                     name.textContent = `${entry.rank}. ${entry.display_name}`;
@@ -922,6 +1246,36 @@
                     score.className = 'shrink-0 text-cyan-400';
                     score.textContent = `${Number(entry.points).toLocaleString()} pts`;
                     row.append(name, score);
+                for (const tag of entry.tags || []) {
+                    const badge = document.createElement('span');
+                    badge.className = 'profile-tag';
+                    badge.textContent = tag.name;
+                    badge.title = tag.description;
+                    badge.tabIndex = 0;
+                    row.append(badge);
+                }
+                    if (globalTagCanManage && /^[a-f0-9]{64}$/.test(entry.player_id || '')) {
+                        const selector = document.createElement('select');
+                        selector.className = 'rounded-lg border border-slate-700 bg-[#0d0d12] px-3 py-2 text-xs';
+                        selector.setAttribute('aria-label', `Tag for ${entry.display_name}`);
+                        for (const tag of assignableTags) {
+                            const option = document.createElement('option');
+                            option.value = tag.id; option.textContent = tag.name; selector.append(option);
+                        }
+                        selector.value = selectedTagId;
+                        const control = document.createElement('button');
+                        control.type = 'button';
+                        control.className = 'rounded-lg border border-slate-700 px-3 py-2 text-xs font-bold text-cyan-300';
+                        const hasTag = () => (entry.tags || []).some(tag => tag.id === selector.value);
+                        const label = () => {
+                            const name = assignableTags.find(tag => tag.id === selector.value)?.name || 'tag';
+                            control.textContent = `${hasTag() ? 'Remove' : 'Assign'} ${name}`;
+                            control.setAttribute('aria-label', `${control.textContent} for ${entry.display_name}`);
+                        };
+                        selector.addEventListener('change', label); label();
+                        control.addEventListener('click', () => assignLeaderboardTag(control, entry.player_id, !hasTag(), selector.value));
+                        row.append(selector, control);
+                    }
                     list.append(row);
                 }
                 if (result.success && !(result.entries || []).length) {

@@ -7,7 +7,7 @@ import pygame
 
 
 class RandomSnippet:
-    def __init__(self, filename, longest_preview):
+    def __init__(self, filename, longest_preview, *, start_frame=None):
         frequency, sample_format, channels = pygame.mixer.get_init()
         self.frequency = frequency
         self.channels = channels
@@ -20,7 +20,9 @@ class RandomSnippet:
         if not self.frames:
             raise ValueError("The song has no playable audio.")
         reserved = min(self.frames, int(longest_preview * frequency))
-        self.start_frame = random.randint(0, self.frames - reserved)
+        if start_frame is not None and (type(start_frame) is not int or not 0 <= start_frame <= self.frames - reserved):
+            raise ValueError("The saved snippet no longer fits this audio file.")
+        self.start_frame = random.randint(0, self.frames - reserved) if start_frame is None else start_frame
 
     def clip(self, duration):
         end_frame = min(self.frames, self.start_frame + max(1, int(duration * self.frequency)))

@@ -1,4 +1,4 @@
-name: Build GRAILD for macOS
+﻿name: Build GRAILD for macOS
 
 on:
   workflow_dispatch:
@@ -45,7 +45,7 @@ jobs:
           python -m pip check
 
       - name: Run platform tests
-        run: python -m unittest test_mac_support -v
+        run: python -m unittest test_mac_support test_mac_build_assets test_brand_assets test_account_tags test_achievements test_audio_files test_game_modes test_round_resume -v
 
       - name: Build and verify app bundle
         run: python build_macos.py --expected-arch "$GRAILD_BUILD_ARCH"

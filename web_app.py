@@ -25,7 +25,7 @@ from datetime import datetime, timezone
 import pygame
 import webview
 
-from achievements import account_achievements
+from achievements import account_achievements, PROFILE_TAGS
 from random_snippets import RandomSnippet
 from audio_files import is_audio_file, get_playback_path
 from canary_integration import CanaryIntegration
@@ -131,8 +131,8 @@ class JuiceSpotApp:
     self.is_game_over = False
     self._window = None
     self.stop_timer = None
-    self.restore_persistent_session()
     self.load_tracks()
+    self.restore_persistent_session()
 
   @contextmanager
   def account_connection(self):
@@ -211,10 +211,27 @@ class JuiceSpotApp:
             unlocked_at TEXT NOT NULL,
             PRIMARY KEY (user_id, achievement_id)
           );
+          CREATE TABLE IF NOT EXISTS account_tags (
+            user_id TEXT NOT NULL REFERENCES accounts(user_id) ON DELETE CASCADE,
+            tag_id TEXT NOT NULL,
+            awarded_at TEXT NOT NULL,
+            assigned_by TEXT REFERENCES accounts(user_id) ON DELETE SET NULL,
+            PRIMARY KEY (user_id, tag_id)
+          );
           CREATE TABLE IF NOT EXISTS game_preferences (
             user_id TEXT PRIMARY KEY REFERENCES accounts(user_id) ON DELETE CASCADE,
             recording_era TEXT NOT NULL DEFAULT '',
             library_source TEXT NOT NULL DEFAULT 'local'
+          );
+          CREATE TABLE IF NOT EXISTS saved_rounds (
+            user_id TEXT PRIMARY KEY REFERENCES accounts(user_id) ON DELETE CASCADE,
+            folder TEXT NOT NULL,
+            track TEXT NOT NULL,
+            mode TEXT NOT NULL,
+            difficulty TEXT NOT NULL,
+            attempt INTEGER NOT NULL,
+            game_over INTEGER NOT NULL,
+            random_start INTEGER
           );
           CREATE TABLE IF NOT EXISTS app_meta (
             key TEXT PRIMARY KEY,
@@ -373,10 +390,62 @@ class JuiceSpotApp:
     self.score = account["total_points"]
     self.streak = account["current_streak"]
     self.random_snippet = None
+    self._random_start_frame = None
+    self.snippet_buffer = None
+    self.game_mode = "classic"
+    self.current_difficulty = "Easy"
+    self.preview_durations = DIFFICULTIES[self.current_difficulty]
     self.attempt = 0
     self.is_game_over = False
-    eligible = self.get_eligible_tracks()
-    self.current_track = random.choice(eligible) if eligible else None
+    if not self._restore_round():
+      self.next_round()
+
+  def _save_round(self):
+    if not self.current_user_id or not self.current_track or not getattr(self, "account_db_path", None):
+      return
+    try:
+      with self.account_connection() as connection:
+        connection.execute(
+            "INSERT OR REPLACE INTO saved_rounds "
+            "(user_id, folder, track, mode, difficulty, attempt, game_over, random_start) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (self.current_user_id, os.path.normcase(os.path.abspath(self.music_folder)), self.current_track,
+             self.game_mode, self.current_difficulty, self.attempt, int(self.is_game_over),
+             getattr(self, "_random_start_frame", None)))
+      self.round_save_error = None
+    except (OSError, sqlite3.Error) as error:
+      self.round_save_error = str(error)
+
+  def _restore_round(self):
+    if not self.current_user_id or not getattr(self, "account_db_path", None):
+      return False
+    try:
+      with self.account_connection() as connection:
+        saved = connection.execute("SELECT * FROM saved_rounds WHERE user_id = ?", (self.current_user_id,)).fetchone()
+      if not saved or saved["folder"] != os.path.normcase(os.path.abspath(self.music_folder)):
+        return False
+      if saved["track"] not in self.get_eligible_tracks() or saved["mode"] not in ("classic", "random"):
+        return False
+      if saved["difficulty"] not in DIFFICULTIES or saved["game_over"] not in (0, 1):
+        return False
+      durations = DIFFICULTIES[saved["difficulty"]]
+      if type(saved["attempt"]) is not int or not 0 <= saved["attempt"] <= len(durations) - (not saved["game_over"]):
+        return False
+      start = saved["random_start"]
+      if start is not None and (type(start) is not int or start < 0):
+        return False
+      self.current_track = saved["track"]
+      self.game_mode = saved["mode"]
+      self.current_difficulty = saved["difficulty"]
+      self.preview_durations = durations
+      self.attempt = saved["attempt"]
+      self.is_game_over = bool(saved["game_over"])
+      self.random_snippet = None
+      self.snippet_buffer = None
+      self._random_start_frame = start if self.game_mode == "random" else None
+      self.round_save_error = None
+      return True
+    except (OSError, sqlite3.Error):
+      return False
 
   def get_account_state(self):
     if not self.current_user_id:
@@ -398,10 +467,12 @@ class JuiceSpotApp:
               (self.current_user_id,),
           )
       ]
+      achievements = account_achievements(connection, self.current_user_id, self.utc_now())
+      global_tags = self._cached_global_tag_state(connection, self.current_user_id)
     attempts = account["total_correct"] + account["total_wrong"]
     return {
         "authenticated": True,
-        "achievements": self.get_achievements(),
+        "achievements": achievements,
         "profile": {
             "username": account["username"],
             "display_name": account["display_name"],
@@ -412,7 +483,9 @@ class JuiceSpotApp:
             "accuracy": round(account["total_correct"] * 100 / attempts, 1) if attempts else 0,
             "current_streak": account["current_streak"],
             "best_streak": account["best_streak"],
-            "is_creator": bool(account["is_creator"]),
+            "is_creator": bool(global_tags.get("can_manage_tags")),
+            "tags": global_tags.get("tags", []),
+            "global_player_id": global_tags.get("player_id", ""),
             "total_points": account["total_points"],
             "songs_played": account["songs_played"],
             "grails_collected": grails_collected,
@@ -425,6 +498,124 @@ class JuiceSpotApp:
       return {"entries": [], "unlocked": 0, "total": 50}
     with self.account_connection() as connection:
       return account_achievements(connection, self.current_user_id, self.utc_now())
+
+  def get_tag_accounts(self):
+    result, _ = self._request_global_tags('/account/tag-players')
+    if not isinstance(result.get('accounts'), list):
+      result['accounts'] = []
+    return result
+
+  def set_account_tag(self, player_id, tag_id, assigned):
+    if not self._assignable_tag_id(tag_id) or type(assigned) is not bool:
+      return {'success': False, 'message': 'Choose Beta Tester or a custom tag. Earned and owner tags cannot be assigned manually.'}
+    if not isinstance(player_id, str) or not re.fullmatch(r'[a-f0-9]{64}', player_id):
+      return {'success': False, 'message': 'Choose a verified global account.'}
+    # The broker checks the verified Discord owner identity on every mutation.
+    result, _ = self._request_global_tags('/account/tags/assign', {
+        'player_id': player_id, 'tag_id': tag_id, 'assigned': 'true' if assigned else 'false'})
+    return result
+
+  def set_discord_account_tag(self, discord_id, tag_id, assigned):
+    match = re.fullmatch(r'(?:([0-9]{15,22})|<@!?([0-9]{15,22})>)', str(discord_id or '').strip())
+    if not match or not self._assignable_tag_id(tag_id) or type(assigned) is not bool:
+      return {'success': False, 'message': 'Enter a Discord ID or mention and choose an assignable tag.'}
+    result, _ = self._request_global_tags('/account/tags/discord', {
+        'discord_id': match.group(1) or match.group(2), 'tag_id': tag_id,
+        'assigned': 'true' if assigned else 'false'})
+    return result
+
+  @staticmethod
+  def _assignable_tag_id(tag_id):
+    return isinstance(tag_id, str) and (tag_id == 'beta_tester' or re.fullmatch(r'custom_[a-f0-9]{24}', tag_id) is not None)
+
+  def get_tag_catalog(self):
+    result, _ = self._request_global_tags('/account/tags/catalog')
+    return result
+
+  def create_custom_tag(self, name, description):
+    if not isinstance(name, str) or not isinstance(description, str) or not 1 <= len(name.strip()) <= 32 or not 1 <= len(description.strip()) <= 240:
+      return {'success': False, 'message': 'Enter a tag name (1–32 characters) and hover description (1–240 characters).'}
+    result, _ = self._request_global_tags('/account/tags/create', {'name': name.strip(), 'description': description.strip()})
+    return result
+
+  def _cached_global_tag_state(self, connection, user_id):
+    try:
+      saved = connection.execute("SELECT value FROM app_meta WHERE key = ?", ('global_tags:' + user_id,)).fetchone()
+      credential = connection.execute("SELECT value FROM app_meta WHERE key = ?", ('global_identity:' + user_id,)).fetchone()
+      if not saved or not credential:
+        return {}
+      cache, session = json.loads(saved['value']), json.loads(credential['value'])
+      broker = self.get_discord_broker_url()
+      if cache['broker'] != broker or session['broker'] != broker or cache['binding'] != hashlib.sha256(session['token'].encode()).hexdigest():
+        return {}
+      return cache['state'] if isinstance(cache['state'], dict) else {}
+    except (ValueError, KeyError, TypeError, AttributeError):
+      return {}
+
+  def _request_global_tags(self, endpoint, payload=None, *, user_id=None):
+    user_id = self.current_user_id if user_id is None else user_id
+    try:
+      if user_id != self.current_user_id:
+        raise ValueError('Account changed. Refresh your profile.')
+      if not user_id:
+        raise ValueError('Sign in and connect Discord or Google to use global tags.')
+      broker = self.get_discord_broker_url()
+      with self.account_connection() as connection:
+        row = connection.execute("SELECT value FROM app_meta WHERE key = ?", ('global_identity:' + user_id,)).fetchone()
+      if not row:
+        raise ValueError('Connect Discord or Google to recognize your tags globally.')
+      saved = json.loads(row['value'])
+      if saved['broker'] != broker:
+        raise ValueError('Reconnect Discord or Google to this server.')
+      token = self.protect_session_data(base64.b64decode(saved['token'], validate=True), decrypt=True).decode('utf-8')
+      result = self.oauth_json_request(broker + endpoint, payload, headers={'Authorization': 'Bearer ' + token})
+      if not isinstance(result, dict) or result.get('success') is not True:
+        raise ValueError('The tag server returned an invalid response.')
+      if user_id != self.current_user_id:
+        raise ValueError('Account changed. Refresh your profile.')
+      return result, hashlib.sha256(saved['token'].encode()).hexdigest()
+    except urllib.error.HTTPError as error:
+      message = {401: 'Reconnect Discord or Google to refresh global tags.',
+                 400: 'Check the tag details and choose an assignable tag.',
+                 409: 'A tag with that name already exists. Choose it from the tag list.',
+                 403: 'Only the verified Discord owner can manage global tags.',
+                 404: 'The sign-in server needs the global tags update.'}.get(error.code, 'Global tags are unavailable. Please retry.')
+      error.close()
+    except (OSError, sqlite3.Error):
+      message = 'Global tags are offline. Your last synced tags remain available.'
+    except (ValueError, KeyError, TypeError) as error:
+      message = str(error) if isinstance(error, ValueError) else 'Reconnect Discord or Google to refresh global tags.'
+    return {'success': False, 'message': message}, None
+
+  def sync_global_tags(self):
+    user_id = self.current_user_id
+    if not user_id:
+      return {'success': False, 'message': 'Sign in to recognize your tags globally.'}
+    with self.account_connection() as connection:
+      achievements = account_achievements(connection, user_id, self.utc_now())
+    result, binding = self._request_global_tags('/account/tags/sync', {
+        'achievement_ids': json.dumps([item['id'] for item in achievements['entries'] if item['unlocked']])}, user_id=user_id)
+    if not result.get('success'):
+      return result
+    if not isinstance(result.get('player_id'), str) or not re.fullmatch(r'[a-f0-9]{64}', result['player_id']) or not isinstance(result.get('tags'), list):
+      return {'success': False, 'message': 'The tag server returned an invalid profile.'}
+    tags = []
+    for tag in result['tags']:
+      if isinstance(tag, dict) and isinstance(tag.get('id'), str) and tag['id'] in PROFILE_TAGS:
+        tags.append({**PROFILE_TAGS[tag['id']], 'awarded_at': tag.get('awarded_at')})
+      elif (isinstance(tag, dict) and isinstance(tag.get('id'), str)
+            and re.fullmatch(r'custom_[a-f0-9]{24}', tag['id']) and tag.get('kind') == 'assigned'
+            and isinstance(tag.get('name'), str) and 1 <= len(tag['name']) <= 32
+            and isinstance(tag.get('description'), str) and 1 <= len(tag['description']) <= 240):
+        tags.append({key: tag.get(key) for key in ('id', 'name', 'description', 'kind', 'awarded_at')})
+    state = {'player_id': result['player_id'], 'tags': tags,
+             'can_manage_tags': result.get('can_manage_tags') is True}
+    with self.account_connection() as connection:
+      # Cache server grants for offline display; local tags/owner flags are never uploaded.
+      connection.execute("INSERT OR REPLACE INTO app_meta (key, value) VALUES (?, ?)",
+                         ('global_tags:' + user_id, json.dumps({'broker': self.get_discord_broker_url(),
+                                                               'binding': binding, 'state': state})))
+    return {'success': True, 'message': 'Tags synced to your verified ' + str(result.get('provider', '')) + ' account.', **state}
 
   def register_account(self, username, password):
     if self.current_user_id:
@@ -1104,11 +1295,11 @@ class JuiceSpotApp:
       self.library_error = f"Music folder not found: {self.music_folder}"
       return
     try:
-      self.tracks = sorted(
-          filename
-          for filename in os.listdir(self.music_folder)
-          if is_audio_file(os.path.join(self.music_folder, filename))
-      )
+      with os.scandir(self.music_folder) as entries:
+        self.tracks = sorted(
+            entry.name for entry in entries
+            if is_audio_file(entry.path, entry=entry)
+        )
     except OSError as error:
       self.tracks = []
       self.current_track = None
@@ -1117,7 +1308,8 @@ class JuiceSpotApp:
     if not self.tracks:
       self.library_error = "No supported audio files were found in this folder."
     self._canary.start_era_scan(self.music_folder, self.tracks)
-    self.next_round()
+    if not self._restore_round():
+      self.next_round()
 
   def state(self):
     return {
@@ -1140,6 +1332,7 @@ class JuiceSpotApp:
         "correct_guesses": self.correct_guesses,
         "wrong_guesses": self.wrong_guesses,
         "game_over": self.is_game_over,
+        "resume_error": getattr(self, "round_save_error", None),
         "title": os.path.splitext(self.current_track)[0]
         if self.current_track and self.is_game_over
         else "",
@@ -1321,8 +1514,11 @@ class JuiceSpotApp:
   def set_game_mode(self, mode):
     if not self.current_user_id or mode not in ("classic", "random"):
       return self.state()
+    if mode == self.game_mode:
+      return self.state()
+    previous_track = self.current_track
     self.game_mode = mode
-    return self.next_round()
+    return self.next_round(exclude_track=previous_track)
 
   def set_difficulty(self, difficulty):
     if not self.current_user_id or difficulty not in DIFFICULTIES:
@@ -1332,10 +1528,11 @@ class JuiceSpotApp:
     self.next_round()
     return self.state()
 
-  def next_round(self):
+  def next_round(self, exclude_track=None):
     self.stop_audio()
     self.random_snippet = None
     self.snippet_buffer = None
+    self._random_start_frame = None
     if not self.current_user_id:
       self.current_track = None
       self.attempt = 0
@@ -1345,7 +1542,10 @@ class JuiceSpotApp:
     self.attempt = 0
     self.is_game_over = False
     eligible = self.get_eligible_tracks()
+    if exclude_track is not None:
+      eligible = [track for track in eligible if track != exclude_track] or eligible
     self.current_track = random.choice(eligible) if eligible else None
+    self._save_round()
     return self.state()
 
   def reroll_song(self):
@@ -1360,7 +1560,9 @@ class JuiceSpotApp:
     self.current_track = random.choice(alternatives)
     self.random_snippet = None
     self.snippet_buffer = None
+    self._random_start_frame = None
     self.attempt = 0
+    self._save_round()
     return {
       "state": self.state(),
       "message": "Song changed. Your score and stats are unchanged.",
@@ -1381,7 +1583,11 @@ class JuiceSpotApp:
       duration = self.preview_durations[self.attempt]
       if self.game_mode == "random":
         if self.random_snippet is None:
-          self.random_snippet = RandomSnippet(track_path, max(self.preview_durations))
+          start = getattr(self, "_random_start_frame", None)
+          self.random_snippet = (RandomSnippet(track_path, max(self.preview_durations), start_frame=start)
+                                 if start is not None else RandomSnippet(track_path, max(self.preview_durations)))
+          self._random_start_frame = self.random_snippet.start_frame
+          self._save_round()
         self.snippet_buffer, duration = self.random_snippet.clip(duration)
         pygame.mixer.music.load(self.snippet_buffer, "wav")
       else:
@@ -1436,6 +1642,7 @@ class JuiceSpotApp:
       self.streak += 1
       stats_error = self.record_song_guess(correct=True, points_awarded=points_awarded)
       self.is_game_over = True
+      self._save_round()
       audio_error = self.play_correct_answer()
       return {
           "state": self.state(),
@@ -1475,12 +1682,14 @@ class JuiceSpotApp:
           )
       except sqlite3.Error:
         pass
+      self._save_round()
       return {
           "state": self.state(),
           "message": f"Round over. The track was '{os.path.splitext(self.current_track)[0]}'.",
           "success": False,
           "cover": self.get_cover_data(),
       }
+    self._save_round()
     return {"state": self.state(), "message": ""}
 
   def get_cover_data(self):
@@ -1583,15 +1792,20 @@ class JuiceSpotApp:
       return
 
   def run(self):
+    if sys.platform == 'win32':
+      try:
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('GRAILD.Desktop')
+      except (AttributeError, OSError):
+        pass
     self._window = webview.create_window(
-        "JuiceSpot - Song Guessing Game",
+        "GRAIL'D - Song Guessing Game",
         resource_path("index.html"),
         js_api=self,
         min_size=(760, 650),
     )
     self._window.events.loaded += self._on_window_loaded
     self._window.events.closing += lambda: self._updates.cancel_download()
-    webview.start()
+    webview.start(icon=resource_path('assets/graild.icns' if sys.platform == 'darwin' else 'assets/graild.ico'))
 
 
 def main():

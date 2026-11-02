@@ -29,6 +29,7 @@ exe = EXE(pyz, a.scripts, [], exclude_binaries=True, name='GRAILD', console=Fals
           codesign_identity=identity, target_arch=None)
 coll = COLLECT(exe, a.binaries, a.datas, name='GRAILD')
 app = BUNDLE(coll, name='GRAILD.app', bundle_identifier='com.graild.desktop',
+             icon=str(root / 'assets' / 'graild.icns'),
              codesign_identity=identity,
              info_plist={'CFBundleShortVersionString': version, 'CFBundleVersion': version,
                          'NSHighResolutionCapable': True,

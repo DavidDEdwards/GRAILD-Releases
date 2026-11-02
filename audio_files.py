@@ -19,10 +19,16 @@ AUDIO_EXTENSIONS = {
 _DECODE_LOCK = threading.Lock()
 
 
-def is_audio_file(filename):
+def is_audio_file(filename, *, entry=None):
     path = Path(filename)
+    # Known audio extensions do not need the Windows MIME registry. DirEntry
+    # reuses directory metadata instead of issuing a stat for every song.
+    if not (entry.is_file() if entry is not None else path.is_file()):
+        return False
+    if path.suffix.lower() in AUDIO_EXTENSIONS:
+        return True
     mime, _ = mimetypes.guess_type(str(path))
-    return path.is_file() and (path.suffix.lower() in AUDIO_EXTENSIONS or bool(mime and mime.startswith("audio/")))
+    return bool(mime and mime.startswith("audio/"))
 
 
 def get_playback_path(filename, cache_dir=None):
