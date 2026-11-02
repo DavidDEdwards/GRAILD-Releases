@@ -1,6 +1,8 @@
-﻿name: Build GRAILD for macOS
+name: Build GRAILD for macOS
 
 on:
+  push:
+    branches: [codex/graild-0.9.2-mac-no-auto-updates]
   workflow_dispatch:
 
 permissions:
@@ -45,7 +47,7 @@ jobs:
           python -m pip check
 
       - name: Run platform tests
-        run: python -m unittest test_mac_support test_mac_updater test_mac_build_assets test_brand_assets test_tls_support test_account_tags test_achievements test_audio_files test_game_modes test_round_resume -v
+        run: python -m unittest test_mac_support test_mac_updater test_mac_build_assets test_brand_assets test_tls_support test_oauth_config test_account_tags test_achievements test_audio_files test_game_modes test_round_resume -v
 
       - name: Build and verify app bundle
         run: python build_macos.py --expected-arch "$GRAILD_BUILD_ARCH"
@@ -96,3 +98,4 @@ jobs:
           if-no-files-found: error
           retention-days: 14
           compression-level: 0
+
