@@ -9,6 +9,11 @@ let currentUpdateState = {status: 'idle'};
 function renderUpdateState(state) {
     currentUpdateState = state;
     document.getElementById('settings-current-version').textContent = state.current_version || '0.8.0';
+    const automaticOption = document.getElementById('update-automatic').closest('label');
+    automaticOption.classList.toggle('hidden', state.automatic_checks_supported === false);
+    if (state.automatic_checks_supported === false) {
+        document.getElementById('update-settings-status').textContent = 'Automatic update checks are disabled on this Mac. Use Check for Updates to check manually.';
+    }
     if (!updateSettingsLoaded) {
         document.getElementById('update-repository').value = state.repository || '';
         document.getElementById('update-channel').value = state.channel || 'beta';
@@ -17,7 +22,7 @@ function renderUpdateState(state) {
     }
     const downloading = ['downloading', 'verifying'].includes(state.status);
     const installing = state.status === 'installing';
-    document.getElementById('update-settings-status').textContent = updateFormError || state.message || '';
+    document.getElementById('update-settings-status').textContent = updateFormError || (state.automatic_checks_supported === false ? 'Automatic update checks are disabled on this Mac. Use Check for Updates to check manually.' : state.message || '');
     document.getElementById('manual-update-check').disabled = downloading || installing || state.status === 'checking';
     document.getElementById('update-last-result').textContent = state.last_result ? `Last update: ${state.last_result.message || state.last_result.status}` : '';
     const failedDownload = ['error', 'cancelled'].includes(state.status) && state.version && state.version !== state.current_version;
@@ -107,3 +112,4 @@ window.addEventListener('pywebviewready', () => {
     pollUpdateState();
     window.setInterval(pollUpdateState, 1000);
 });
+
