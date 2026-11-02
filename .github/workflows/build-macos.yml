@@ -45,10 +45,20 @@ jobs:
           python -m pip check
 
       - name: Run platform tests
-        run: python -m unittest test_mac_support test_mac_updater test_mac_build_assets test_brand_assets test_account_tags test_achievements test_audio_files test_game_modes test_round_resume -v
+        run: python -m unittest test_mac_support test_mac_updater test_mac_build_assets test_brand_assets test_tls_support test_account_tags test_achievements test_audio_files test_game_modes test_round_resume -v
 
       - name: Build and verify app bundle
         run: python build_macos.py --expected-arch "$GRAILD_BUILD_ARCH"
+
+      - name: Verify packaged OAuth TLS without developer CA paths
+        env:
+          SSL_CERT_FILE: /tmp/graild-nonexistent-ca.pem
+          SSL_CERT_DIR: /tmp/graild-nonexistent-ca-directory
+        run: |
+          VERSION=$(python -c 'from app_version import APP_VERSION; print(APP_VERSION)')
+          FOLDER="dist/releases/v$VERSION/macOS-$GRAILD_BUILD_ARCH"
+          "$FOLDER/GRAILD.app/Contents/MacOS/GRAILD" --tls-smoke-test "$FOLDER/tls-smoke.json"
+          cat "$FOLDER/tls-smoke.json"
 
       - name: Record ZIP checksum and build information
         run: |
@@ -82,6 +92,7 @@ jobs:
             dist/releases/*/macOS-${{ matrix.arch }}/*.zip
             dist/releases/*/macOS-${{ matrix.arch }}/SHA256SUMS.txt
             dist/releases/*/macOS-${{ matrix.arch }}/build-info.json
+            dist/releases/*/macOS-${{ matrix.arch }}/tls-smoke.json
           if-no-files-found: error
           retention-days: 14
           compression-level: 0

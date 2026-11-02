@@ -33,6 +33,7 @@ from auto_update import UpdateManager, UnavailableUpdateManager
 from update_security import UpdateError
 from app_version import APP_VERSION
 from platform_support import user_data_directory, mac_session_data
+from tls_support import verified_ssl_context
 
 try:
   import requests
@@ -789,7 +790,7 @@ class JuiceSpotApp:
       body = urllib.parse.urlencode(payload).encode("utf-8")
       request_headers["Content-Type"] = "application/x-www-form-urlencoded"
     request = urllib.request.Request(url, data=body, headers=request_headers)
-    with urllib.request.urlopen(request, timeout=15) as response:
+    with urllib.request.urlopen(request, timeout=15, context=verified_ssl_context()) as response:
       return json.loads(response.read().decode("utf-8"))
 
   def build_social_authorization_url(self, flow):

@@ -2,12 +2,13 @@
 import os
 import runpy
 from pathlib import Path
-from PyInstaller.utils.hooks import collect_all
+from PyInstaller.utils.hooks import collect_all, collect_data_files
 
 root = Path(SPECPATH)
 version = runpy.run_path(str(root / "app_version.py"))["APP_VERSION"]
 datas = [(str(root / name), '.') for name in ('index.html', 'canary_ui.js', 'update_ui.js')]
 datas += [(str(root / 'assets'), 'assets')]
+datas += collect_data_files('certifi')
 binaries = []
 hiddenimports = ['keyring.backends.macOS']
 for package in ('pygame', 'webview', 'imageio_ffmpeg', 'keyring'):
