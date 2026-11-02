@@ -1,4 +1,4 @@
-﻿"""Native macOS entry point; avoids the unused legacy Tkinter frontend."""
+"""Native macOS entry point; avoids the unused legacy Tkinter frontend."""
 if __name__ == '__main__':
     import sys
     if len(sys.argv) > 1 and sys.argv[1] == '--mac-update-helper':
@@ -12,3 +12,4 @@ if __name__ == '__main__':
         set_handoff(sys.argv[2], sys.argv[3])
     from web_app import main
     main()
+
