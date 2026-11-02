@@ -66,3 +66,4 @@ def write_diagnostic_report(destination):
         report['error'] = str(error)
     Path(destination).write_text(json.dumps(report,indent=2),encoding='utf-8')
     return 0 if report['passed'] else 1
+
