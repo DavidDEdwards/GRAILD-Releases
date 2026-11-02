@@ -1,4 +1,4 @@
-﻿"""Regression coverage for Mac resources flattened by browser uploads."""
+"""Regression coverage for Mac resources flattened by browser uploads."""
 from contextlib import redirect_stdout
 import io
 from pathlib import Path
@@ -38,3 +38,4 @@ class MacBuildAssetsTests(unittest.TestCase):
 
 
 if __name__=='__main__':unittest.main()
+
