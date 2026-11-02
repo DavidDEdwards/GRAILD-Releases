@@ -55,3 +55,13 @@ Recovery refuses modified/unrecognized installations and backups. It never
 replaces an already healthy update or silently overwrites an independent install.
 Ad-hoc signing is supported by publisher signatures, but does not replace Apple
 Developer ID distribution signing, Gatekeeper approval, or notarization.
+
+## Validation scope
+
+The native test jobs exercise real `ditto` extraction/copying, bundle directory
+swaps, file modes, rollback, interrupted recovery and process identity on both
+architectures. Startup success/failure is injected in transaction tests. The native
+builder separately verifies the actual packaged app's code signature, architecture
+and app/ZIP fingerprints. A live published-version-to-version UI update exercise
+and interactive runtime acceptance remain manual release checks.
+
