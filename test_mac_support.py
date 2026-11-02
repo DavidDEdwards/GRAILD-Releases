@@ -1,4 +1,4 @@
-﻿import sys
+import sys
 import tempfile
 import types
 from pathlib import Path
@@ -49,3 +49,4 @@ class MacSupportTests(unittest.TestCase):
 
 
 if __name__=='__main__':unittest.main()
+
