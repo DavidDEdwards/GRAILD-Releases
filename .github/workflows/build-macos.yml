@@ -2,8 +2,6 @@ name: Build GRAILD for macOS
 # Retry source-complete 0.9.2 Mac artifacts
 
 on:
-  push:
-    branches: [codex/graild-0.9.2-mac-no-auto-updates]
   workflow_dispatch:
 
 concurrency:
@@ -81,8 +79,11 @@ jobs:
         run: |
           VERSION=$(python -c 'from app_version import APP_VERSION; print(APP_VERSION)')
           FOLDER="dist/releases/v$VERSION/macOS-$GRAILD_BUILD_ARCH"
+          set +e
           "$FOLDER/GRAILD.app/Contents/MacOS/GRAILD" --tls-smoke-test "$FOLDER/tls-smoke.json"
+          RESULT=$?
           cat "$FOLDER/tls-smoke.json"
+          exit "$RESULT"
 
       - name: Record ZIP checksum and build information
         run: |
