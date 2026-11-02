@@ -34,6 +34,7 @@ from update_security import UpdateError
 from app_version import APP_VERSION
 from platform_support import user_data_directory, mac_session_data
 from tls_support import verified_ssl_context
+from oauth_config import google_client_id as resolve_google_client_id
 
 try:
   import requests
@@ -55,7 +56,7 @@ DIFFICULTIES = {
 }
 PASSWORD_ITERATIONS = 600_000
 USERNAME_PATTERN = re.compile(r"^[A-Za-z0-9_]{3,24}$")
-AVATARS = ("🧃", "💿", "🌙", "⭐", "🧊", "🕊️", "🦋", "🎧", "💎", "🖤")
+AVATARS = ("ðŸ§ƒ", "ðŸ’¿", "ðŸŒ™", "â­", "ðŸ§Š", "ðŸ•Šï¸", "ðŸ¦‹", "ðŸŽ§", "ðŸ’Ž", "ðŸ–¤")
 DEFAULT_DISCORD_BROKER_URL = "https://graild-discord-broker.onrender.com"
 VERSION_SUFFIX = re.compile(
     r"\s*(?:\(|\[)?\s*(?:session(?:\s+edit|s)?|normal(?:\s+version)?|"
@@ -535,7 +536,7 @@ class JuiceSpotApp:
 
   def create_custom_tag(self, name, description):
     if not isinstance(name, str) or not isinstance(description, str) or not 1 <= len(name.strip()) <= 32 or not 1 <= len(description.strip()) <= 240:
-      return {'success': False, 'message': 'Enter a tag name (1–32 characters) and hover description (1–240 characters).'}
+      return {'success': False, 'message': 'Enter a tag name (1â€“32 characters) and hover description (1â€“240 characters).'}
     result, _ = self._request_global_tags('/account/tags/create', {'name': name.strip(), 'description': description.strip()})
     return result
 
@@ -624,7 +625,7 @@ class JuiceSpotApp:
     username = str(username or "").strip()
     password = str(password or "")
     if not USERNAME_PATTERN.fullmatch(username):
-      return {"success": False, "message": "Username must be 3–24 letters, numbers, or underscores."}
+      return {"success": False, "message": "Username must be 3â€“24 letters, numbers, or underscores."}
     if not 10 <= len(password) <= 128:
       return {"success": False, "message": "Password must be between 10 and 128 characters."}
     user_id = uuid.uuid4().hex
@@ -680,7 +681,7 @@ class JuiceSpotApp:
     provider = str(provider or "").strip().casefold()
     if provider not in ("google", "discord"):
       return {"success": False, "message": "Choose Google or Discord."}
-    google_client_id = os.environ.get("GRAILD_GOOGLE_CLIENT_ID", "").strip()
+    google_client_id = resolve_google_client_id()
     if provider == "google" and not google_client_id:
       return {"success": False, "message": "Set GRAILD_GOOGLE_CLIENT_ID to your Google Desktop OAuth client ID."}
     if provider == "discord":
@@ -1037,7 +1038,7 @@ class JuiceSpotApp:
     display_name = str(display_name or "").strip()
     avatar = str(avatar or "")
     if not 1 <= len(display_name) <= 32:
-      return {"success": False, "message": "Display name must be 1–32 characters."}
+      return {"success": False, "message": "Display name must be 1â€“32 characters."}
     if avatar not in AVATARS:
       return {"success": False, "message": "Choose one of the available avatars."}
     with self.account_connection() as connection:
@@ -1751,25 +1752,35 @@ class JuiceSpotApp:
     return f"data:{mime_type};base64,{encoded}"
 
   def get_update_state(self):
-    return self._updates.snapshot()
+    state = self._updates.snapshot()
+    state["automatic_checks_supported"] = sys.platform != "darwin"
+    return state
 
   def save_update_settings(self, repository, channel, automatic=True):
     try:
-      return {"success": True, **self._updates.save_settings(repository, channel, automatic)}
+      if sys.platform == "darwin":
+        automatic = False
+      return {"success": True, "automatic_checks_supported": sys.platform != "darwin",
+              **self._updates.save_settings(repository, channel, automatic)}
     except UpdateError as error:
       return {"success": False, "message": str(error)}
 
   def check_for_updates(self):
-    return self._updates.check()
+    state = self._updates.check()
+    state["automatic_checks_supported"] = sys.platform != "darwin"
+    return state
 
   def download_update(self):
     try:
-      return {"success": True, **self._updates.download()}
+      return {"success": True, "automatic_checks_supported": sys.platform != "darwin",
+              **self._updates.download()}
     except UpdateError as error:
       return {"success": False, "message": str(error)}
 
   def cancel_update_download(self):
-    return self._updates.cancel_download()
+    state = self._updates.cancel_download()
+    state["automatic_checks_supported"] = sys.platform != "darwin"
+    return state
 
   def install_update(self):
     try:
@@ -1787,7 +1798,8 @@ class JuiceSpotApp:
       if not healthy_ui:
         return
       acknowledge_startup()
-      self._updates.check(automatic=True)
+      if sys.platform != 'darwin':
+        self._updates.check(automatic=True)
     except Exception:
       # An updated build must not acknowledge startup if its native UI failed.
       return
@@ -1811,3 +1823,4 @@ class JuiceSpotApp:
 
 def main():
   JuiceSpotApp().run()
+
