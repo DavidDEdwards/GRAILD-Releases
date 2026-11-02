@@ -415,3 +415,4 @@ async function recheckAutomaticEras() {
         document.getElementById('automatic-era-status').textContent = 'Could not start the Canary era check. Please retry.';
     }
 }
+
