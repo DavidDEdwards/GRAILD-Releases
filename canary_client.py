@@ -226,3 +226,4 @@ class CanaryClient:
         if not str(query).strip():
             raise CanaryError("Enter a song title to search covers.", 400)
         return self._get("/covers/search", {"q": str(query).strip(), "limit": max(1, min(100, int(limit)))}, ttl=86400)
+
