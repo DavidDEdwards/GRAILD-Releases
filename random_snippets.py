@@ -35,4 +35,3 @@ class RandomSnippet:
             output.writeframes(audio)
         buffer.seek(0)
         return buffer, (end_frame - self.start_frame) / self.frequency
-

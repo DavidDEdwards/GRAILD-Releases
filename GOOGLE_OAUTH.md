@@ -27,4 +27,3 @@ still required: build each Mac architecture from the updated sources, launch
 from Finder without the variable, complete Google sign-in in the browser, and
 confirm the account session survives an app restart. Existing build kits and
 binaries must be regenerated from these sources to acquire the fix.
-

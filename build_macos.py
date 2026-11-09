@@ -13,6 +13,7 @@ UI_ASSET_FILES = (
     'tailwind.css', 'fonts.css', 'inter-400.ttf', 'inter-600.ttf',
     'inter-700.ttf', 'inter-900.ttf', 'Inter-OFL.txt', 'Tailwind-LICENSE.txt',
     'graild-logo.png', 'graild.ico', 'graild.icns',
+    'graild-ui.css', 'graild-ui.js', 'graild-challenges.js',
 )
 
 
@@ -89,4 +90,3 @@ def main():
 
 
 if __name__ == '__main__': main()
-

@@ -83,4 +83,3 @@ def account_achievements(connection, user_id, now):
     return {"entries": entries, "unlocked": sum(item["unlocked"] for item in entries), "total": len(ACHIEVEMENTS)}
 
 
-

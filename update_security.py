@@ -191,4 +191,3 @@ def validated_job(path):
     if path.parent != root or not re.fullmatch(r"[0-9a-f]{32}", path.name):
         raise UpdateError("Invalid updater staging directory.")
     return path
-

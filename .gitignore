@@ -13,4 +13,3 @@ release-output/
 .venv-mac/
 *.p8
 *.mobileprovision
-

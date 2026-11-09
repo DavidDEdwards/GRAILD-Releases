@@ -64,4 +64,3 @@ architectures. Startup success/failure is injected in transaction tests. The nat
 builder separately verifies the actual packaged app's code signature, architecture
 and app/ZIP fingerprints. A live published-version-to-version UI update exercise
 and interactive runtime acceptance remain manual release checks.
-

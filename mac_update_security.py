@@ -173,4 +173,3 @@ def macho_architectures(filename):
         else:
             raise UpdateError('The update is not a Mac executable.')
     return {name for cpu, name in ((0x01000007,'x86_64'),(0x0100000c,'arm64')) if cpu in cpus}
-

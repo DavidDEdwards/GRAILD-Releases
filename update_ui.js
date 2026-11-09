@@ -112,4 +112,3 @@ window.addEventListener('pywebviewready', () => {
     pollUpdateState();
     window.setInterval(pollUpdateState, 1000);
 });
-

@@ -16,7 +16,7 @@ FILES = ['mac_launcher.py', 'web_app.py', 'platform_support.py', 'app_version.py
          'test_mac_build_assets.py', 'test_audio_files.py', 'test_game_modes.py', 'test_round_resume.py', 'test_brand_assets.py',
          'mac_updater.py', 'mac_update_security.py', 'test_mac_updater.py', 'MAC_AUTO_UPDATES.md',
          'tls_support.py', 'test_tls_support.py', 'oauth_config.py', 'test_oauth_config.py',
-         'GOOGLE_OAUTH.md']
+         'GOOGLE_OAUTH.md', 'prepare_mac_release.py']
 COMMAND = '''#!/bin/bash
 set -euo pipefail
 cd -- "$(dirname -- "$0")"
@@ -34,7 +34,7 @@ python -m unittest test_mac_support test_mac_updater test_mac_build_assets test_
 python build_macos.py --expected-arch x86_64 --output-dir ../macOS-x86_64
 echo "Built in ../macOS-x86_64. Native testing and Developer ID notarization are still required."
 '''
-README = '''# GRAIL'D 0.9.0 â€” Intel Mac build handoff
+README = '''# GRAIL'D 0.9.0 — Intel Mac build handoff
 
 This folder contains source and build tools, NOT a compiled Mac application.
 No Mac app could be built on the Windows development computer.
@@ -99,4 +99,3 @@ def main():
 
 
 if __name__ == '__main__': main()
-

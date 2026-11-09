@@ -321,4 +321,3 @@ class CanaryIntegration:
         with self.lock:
             job = self.jobs.get(str(job_id))
             return {key: value for key, value in job.items() if key != "created"} if job else {"status": "failed", "message": "This metadata request expired. Please retry."}
-

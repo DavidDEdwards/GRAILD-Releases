@@ -49,4 +49,3 @@ def acknowledge_startup():
                             "message": "Interrupted installation recovered; this build started successfully."})
         except (OSError, UpdateError, KeyError, TypeError):
             continue
-

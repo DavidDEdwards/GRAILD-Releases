@@ -1,5 +1,5 @@
 name: Build GRAILD for macOS
-# Retry source-complete 0.9.2 Mac artifacts
+# Build 0.9.3 Mac artifacts
 
 on:
   workflow_dispatch:
@@ -20,7 +20,7 @@ jobs:
       - name: Cancel older runs on this build branch
         env:
           GH_TOKEN: ${{ github.token }}
-          BUILD_BRANCH: codex/graild-0.9.2-mac-no-auto-updates
+          BUILD_BRANCH: codex/graild-0.9.3-mac
         run: |
           gh api --paginate "repos/${GITHUB_REPOSITORY}/actions/workflows/build-macos.yml/runs?branch=${BUILD_BRANCH}&per_page=100" --jq '.workflow_runs[] | select(.status == "queued" or .status == "in_progress") | .id' | while read -r run_id; do
             if [ "$run_id" != "$GITHUB_RUN_ID" ]; then

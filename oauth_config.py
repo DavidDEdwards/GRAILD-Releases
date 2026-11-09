@@ -18,4 +18,3 @@ def google_client_id():
     module avoids depending on the launch environment or bundled resource paths.
     """
     return os.environ.get("GRAILD_GOOGLE_CLIENT_ID", "").strip() or DEFAULT_GOOGLE_CLIENT_ID
-

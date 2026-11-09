@@ -1,3 +1,2 @@
-APP_VERSION = "0.9.2"
+APP_VERSION = "0.9.3"
 APP_ID = "GRAILD"
-

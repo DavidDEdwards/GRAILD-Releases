@@ -357,4 +357,3 @@ class UnavailableUpdateManager:
 
     def _state(self, status, message, **values):
         self.message = message
-

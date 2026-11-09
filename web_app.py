@@ -49,6 +49,8 @@ except ImportError:
   APIC = None
 
 
+CHALLENGE_MODES = ("sudden_death", "three_lives", "time_attack", "sprint")
+
 DIFFICULTIES = {
     "Easy": [1, 2, 4, 7, 11, 16],
     "Medium": [1, 3, 6, 10],
@@ -56,7 +58,7 @@ DIFFICULTIES = {
 }
 PASSWORD_ITERATIONS = 600_000
 USERNAME_PATTERN = re.compile(r"^[A-Za-z0-9_]{3,24}$")
-AVATARS = ("ðŸ§ƒ", "ðŸ’¿", "ðŸŒ™", "â­", "ðŸ§Š", "ðŸ•Šï¸", "ðŸ¦‹", "ðŸŽ§", "ðŸ’Ž", "ðŸ–¤")
+AVATARS = ("🧃", "💿", "🌙", "⭐", "🧊", "🕊️", "🦋", "🎧", "💎", "🖤")
 DEFAULT_DISCORD_BROKER_URL = "https://graild-discord-broker.onrender.com"
 VERSION_SUFFIX = re.compile(
     r"\s*(?:\(|\[)?\s*(?:session(?:\s+edit|s)?|normal(?:\s+version)?|"
@@ -238,6 +240,15 @@ class JuiceSpotApp:
           CREATE TABLE IF NOT EXISTS app_meta (
             key TEXT PRIMARY KEY,
             value TEXT NOT NULL
+          );
+          CREATE TABLE IF NOT EXISTS challenge_bests (
+            user_id TEXT NOT NULL REFERENCES accounts(user_id) ON DELETE CASCADE,
+            mode TEXT NOT NULL,
+            best_score INTEGER NOT NULL DEFAULT 0,
+            best_songs INTEGER NOT NULL DEFAULT 0,
+            runs INTEGER NOT NULL DEFAULT 0,
+            updated_at TEXT NOT NULL,
+            PRIMARY KEY (user_id, mode)
           );
           """
       )
@@ -536,7 +547,7 @@ class JuiceSpotApp:
 
   def create_custom_tag(self, name, description):
     if not isinstance(name, str) or not isinstance(description, str) or not 1 <= len(name.strip()) <= 32 or not 1 <= len(description.strip()) <= 240:
-      return {'success': False, 'message': 'Enter a tag name (1â€“32 characters) and hover description (1â€“240 characters).'}
+      return {'success': False, 'message': 'Enter a tag name (1–32 characters) and hover description (1–240 characters).'}
     result, _ = self._request_global_tags('/account/tags/create', {'name': name.strip(), 'description': description.strip()})
     return result
 
@@ -625,7 +636,7 @@ class JuiceSpotApp:
     username = str(username or "").strip()
     password = str(password or "")
     if not USERNAME_PATTERN.fullmatch(username):
-      return {"success": False, "message": "Username must be 3â€“24 letters, numbers, or underscores."}
+      return {"success": False, "message": "Username must be 3–24 letters, numbers, or underscores."}
     if not 10 <= len(password) <= 128:
       return {"success": False, "message": "Password must be between 10 and 128 characters."}
     user_id = uuid.uuid4().hex
@@ -843,18 +854,12 @@ class JuiceSpotApp:
               "redirect_uri": flow["redirect_uri"],
           },
       )
-      access_token = token_response.get("access_token")
-      if not access_token:
-        raise ValueError("Google token exchange did not return an access token.")
-      identity = self.oauth_json_request(
-          "https://openidconnect.googleapis.com/v1/userinfo",
-          headers={"Authorization": f"Bearer {access_token}"},
-      )
-      if identity.get("email_verified") is not True:
-        raise ValueError("Verify your Google email address before connecting it.")
+      id_token = token_response.get("id_token")
+      if not id_token:
+        raise ValueError("Google token exchange did not return an ID token.")
       return self.oauth_json_request(
           f"{self.get_discord_broker_url()}/oauth/google/verify",
-          {"access_token": access_token},
+          {"id_token": id_token},
       )
 
     broker_url = flow.get("broker_url") or self.get_discord_broker_url()
@@ -1038,7 +1043,7 @@ class JuiceSpotApp:
     display_name = str(display_name or "").strip()
     avatar = str(avatar or "")
     if not 1 <= len(display_name) <= 32:
-      return {"success": False, "message": "Display name must be 1â€“32 characters."}
+      return {"success": False, "message": "Display name must be 1–32 characters."}
     if avatar not in AVATARS:
       return {"success": False, "message": "Choose one of the available avatars."}
     with self.account_connection() as connection:
@@ -1522,6 +1527,46 @@ class JuiceSpotApp:
     self.game_mode = mode
     return self.next_round(exclude_track=previous_track)
 
+  def get_challenge_bests(self):
+    if not self.current_user_id:
+      return {}
+    try:
+      with self.account_connection() as connection:
+        rows = connection.execute(
+            "SELECT mode, best_score, best_songs, runs FROM challenge_bests WHERE user_id = ?",
+            (self.current_user_id,),
+        ).fetchall()
+    except sqlite3.Error:
+      return {}
+    return {row["mode"]: {"best_score": row["best_score"], "best_songs": row["best_songs"], "runs": row["runs"]}
+            for row in rows if row["mode"] in CHALLENGE_MODES}
+
+  def save_challenge_result(self, mode, score, songs):
+    if not self.current_user_id:
+      return {"success": False, "message": "Sign in to save challenge results."}
+    if mode not in CHALLENGE_MODES:
+      return {"success": False, "message": "Unknown challenge."}
+    try:
+      score, songs = int(score), int(songs)
+    except (TypeError, ValueError):
+      return {"success": False, "message": "Challenge results must be whole numbers."}
+    if not (0 <= score <= 1_000_000 and 0 <= songs <= 10_000):
+      return {"success": False, "message": "Challenge result is out of range."}
+    previous = self.get_challenge_bests().get(mode)
+    try:
+      with self.account_connection() as connection:
+        connection.execute(
+            "INSERT INTO challenge_bests (user_id, mode, best_score, best_songs, runs, updated_at) "
+            "VALUES (?, ?, ?, ?, 1, ?) ON CONFLICT(user_id, mode) DO UPDATE SET "
+            "best_score = MAX(best_score, excluded.best_score), best_songs = MAX(best_songs, excluded.best_songs), "
+            "runs = runs + 1, updated_at = excluded.updated_at",
+            (self.current_user_id, mode, score, songs, self.utc_now()),
+        )
+    except sqlite3.Error:
+      return {"success": False, "message": "Could not save this challenge result."}
+    old_best = previous["best_score"] if previous else 0
+    return {"success": True, "new_best": score > old_best, "bests": self.get_challenge_bests()}
+
   def set_difficulty(self, difficulty):
     if not self.current_user_id or difficulty not in DIFFICULTIES:
       return self.state()
@@ -1823,4 +1868,3 @@ class JuiceSpotApp:
 
 def main():
   JuiceSpotApp().run()
-

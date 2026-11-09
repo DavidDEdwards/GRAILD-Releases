@@ -48,4 +48,3 @@ def _mac_session_data(data, decrypt=False):
     except Exception:
         # Do not expose key material or backend error details to the UI/logs.
         raise OSError('macOS Keychain could not protect this session. Unlock your login Keychain and try signing in again.') from None
-

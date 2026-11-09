@@ -88,4 +88,3 @@ On **both** Intel and Apple Silicon, using the actual packaged app:
 8. Verify Gatekeeper accepts the downloaded notarized artifact. Do not bypass Gatekeeper as a substitute for this release test.
 
 Record Mac model/architecture, macOS version, artifact checksum, and results before calling the Mac release ready. These native checks have not run on this Windows computer.
-

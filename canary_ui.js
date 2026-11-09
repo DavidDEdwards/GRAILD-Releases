@@ -18,7 +18,7 @@ function canaryText(tag, text, className = '') {
 }
 
 function canaryButton(text, action) {
-    const button = canaryText('button', text, 'rounded-lg border border-purple-500/40 bg-purple-500/10 px-4 py-2 text-sm font-bold hover:bg-purple-500/20 disabled:opacity-40');
+    const button = canaryText('button', text, 'btn btn-secondary btn-sm');
     button.type = 'button';
     button.addEventListener('click', action);
     return button;
@@ -39,15 +39,13 @@ async function canaryRequest(operation, options = {}) {
 
 function switchCatalogView(view) {
     const remote = view === 'canary';
-    document.getElementById('catalog-grid').classList.toggle('hidden', remote);
-    document.getElementById('local-format-control').classList.toggle('hidden', remote);
+    catalogView = view;
+    syncCatalogChrome();
     document.getElementById('canary-browser').classList.toggle('hidden', !remote);
     for (const name of ['local', 'canary']) {
         const button = document.getElementById(`${name}-catalog-tab`);
         const active = name === view;
         button.setAttribute('aria-selected', String(active));
-        button.classList.toggle('bg-purple-600', active);
-        button.classList.toggle('bg-[#1e1e2f]', !active);
     }
     if (remote && !canaryManifestLoaded) {
         canaryManifestLoaded = true;
@@ -87,6 +85,11 @@ async function searchCanary(page = 0) {
     button.disabled = true;
     document.getElementById('canary-previous').disabled = true;
     document.getElementById('canary-next').disabled = true;
+    const loadingGrid = document.getElementById('canary-results');
+    if (!loadingGrid.querySelector('article')) {
+        loadingGrid.replaceChildren();
+        for (let index = 0; index < 3; index += 1) loadingGrid.append(canaryText('div', '', 'skeleton h-28'));
+    }
     const query = {query: document.getElementById('canary-search').value.trim(),
                    era: document.getElementById('canary-era').value.trim(),
                    category: document.getElementById('canary-category').value, page};
@@ -99,21 +102,26 @@ async function searchCanary(page = 0) {
         grid.replaceChildren();
         for (const song of songs) {
             if (song.era) knownCanaryEras.add(song.era);
-            const card = canaryText('article', '', 'glass-card rounded-2xl p-5 space-y-3');
+            const card = canaryText('article', '', 'card canary-card');
             card.append(canaryText('h3', song.title, 'font-bold text-white'));
-            card.append(canaryText('p', `${song.artist || 'Unknown artist'} | ${song.era || 'Era unknown'} | ${song.category || 'Uncategorized'} | ${song.duration_str || 'Duration unknown'}`, 'text-xs text-slate-400'));
+            card.append(canaryText('p', `${song.artist || 'Unknown artist'} | ${song.era || 'Era unknown'} | ${song.category || 'Uncategorized'} | ${song.duration_str || 'Duration unknown'}`, 'small'));
             card.append(canaryButton('Song information', () => openCanarySong(song.id)));
             grid.append(card);
         }
         updateCanaryEraSuggestions();
         const total = Number(result.total || 0);
         status.textContent = result._notice || `${total.toLocaleString()} matching songs. Metadata only; audio comes from your local library.`;
-        if (!songs.length) grid.append(canaryText('p', 'No matching songs. Try another title, era, or category.', 'text-sm text-slate-400'));
+        if (!songs.length) grid.append(stateCard({icon: 'i-search', title: 'No matching songs', body: 'Try another title, era, or category.'}));
         document.getElementById('canary-pagination').textContent = `Page ${page + 1} of ${Math.max(1, Math.ceil(total / 20))}`;
         document.getElementById('canary-previous').disabled = page === 0;
         document.getElementById('canary-next').disabled = (page + 1) * 20 >= total;
     } catch (error) {
-        if (token === canaryBrowserToken) status.textContent = error.message;
+        if (token === canaryBrowserToken) {
+            status.textContent = error.message;
+            document.getElementById('canary-results').replaceChildren(stateCard({icon: 'i-cloud-off', tone: 'error',
+                title: "Canary didn't respond", body: 'Your local songs and game are unaffected.',
+                action: {label: 'Try again', onClick: () => searchCanary(page)}}));
+        }
     } finally {
         if (token === canaryBrowserToken) button.disabled = false;
     }
@@ -151,6 +159,7 @@ function updateRecordingEraOptions(state) {
         if (source) { source.value = website ? 'canary' : 'local'; source.disabled = !state.authenticated; }
     }
     document.getElementById('local-game-choices')?.classList.toggle('hidden', website);
+    document.getElementById('challenge-section')?.classList.toggle('hidden', website);
     document.getElementById('canary-website-choice')?.classList.toggle('hidden', !website);
     if (website && !canaryErasRequested && !canaryErasLoading) refreshCanaryEraList();
     const summary = website
@@ -190,12 +199,14 @@ async function changeRecordingEra(era) {
 
 function addLocalCanaryControls(card, song) {
     const metadata = song.canary;
-    card.append(canaryText('p', metadata
+    const meta = canaryText('p', metadata
         ? `Canary: ${metadata.title} | ${metadata.era || 'Era unknown'} | ${metadata.category || 'Uncategorized'}`
         : song.canary_era ? `Canary era: ${song.canary_era} (automatically checked)`
         : song.era_status === 'needs_review' ? 'Conflicting Canary eras - review recording'
         : song.era_status === 'not_found' ? 'No exact Canary match - review recording'
-        : 'Canary era check pending', 'text-xs text-slate-400'));
+        : 'Canary era check pending', 'song-meta');
+    meta.dataset.status = metadata ? 'confirmed' : song.canary_era ? 'checked' : song.era_status || 'pending';
+    card.append(meta);
     card.append(canaryButton(metadata ? 'Song information' : 'Match on Canary', () => openLocalCanary(song.filename)));
 }
 
@@ -382,13 +393,14 @@ async function watchAutomaticEraScan() {
             const progress = await window.pywebview.api.get_canary_era_scan();
             if (token !== automaticEraWatchToken) return;
             const running = progress.status === 'running' || progress.status === 'queued';
+            uiHook('onEraScan', progress);
             button.disabled = running;
             if (running) {
                 status.textContent = `Checking Canary eras: ${progress.processed || 0} / ${progress.total || 0} songs. You can keep using the app.`;
                 await new Promise(resolve => window.setTimeout(resolve, 1000));
                 continue;
             }
-            if (progress.status === 'complete') {
+            if (progress.status === 'complete' && progress.total) {
                 status.textContent = `${progress.resolved || 0} / ${progress.total || 0} songs have Canary eras; ${progress.review || 0} need review or have no exact match.` + (progress.notice ? ` ${progress.notice}` : '');
                 await refreshCatalog();
                 renderState(await window.pywebview.api.get_state());
@@ -415,4 +427,3 @@ async function recheckAutomaticEras() {
         document.getElementById('automatic-era-status').textContent = 'Could not start the Canary era check. Please retry.';
     }
 }
-
