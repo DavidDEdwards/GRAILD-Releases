@@ -38,7 +38,7 @@
   "prepare_mac_release.py": "ca25ef6bc59f96f913e91733cdfb2778e48c689f312c65fbd9e4b9ab07c906b8",
   "random_snippets.py": "50730c195fce528671d832ce3e5f977d67646b81e44826a36c8f5256d16166bf",
   "release-notes/v0.9.3.md": "baa16ba15da3d1b662c1fbe9d3d4cdafb10dc6ae031a813a4811f49e46dce00e",
-  "requirements.txt": "dbaf181360bc17a5f6cb2b9b29697cd462749aaa063a1be7fafc5ec850ac7998",
+  "requirements.txt": "86e354dddc7335479f59f415782adb4d7ede66156392c85b7797ef054fdf5ee6",
   "test_account_tags.py": "2ea6759c14384c8e55a651bc01842e7eaefb2e6a6a5fdc996cb5098ab4a732c4",
   "test_achievements.py": "71e3e3ba13b0f60792e743ca062910a70acd94d4d4c6b0a7863d2907000fcf87",
   "test_audio_files.py": "099415131a9ea421fd54f0e4a2a5e64aed168263ae8bdf99d0b0b9ade9ebdafd",
