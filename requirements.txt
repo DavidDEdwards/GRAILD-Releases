@@ -5,6 +5,6 @@ certifi>=2024.2.2
 mutagen>=1.47
 pyinstaller>=6.0
 imageio-ffmpeg>=0.6,<1
-cryptography>=44,<47
+cryptography>=50.0.2,<51
 
 keyring>=25,<26; sys_platform == "darwin"

@@ -85,6 +85,44 @@ jobs:
           cat "$FOLDER/tls-smoke.json"
           exit "$RESULT"
 
+      # Opens the real app like a player would, then checks it is still running.
+      - name: Launch the app and check it starts
+        run: |
+          VERSION=$(python -c 'from app_version import APP_VERSION; print(APP_VERSION)')
+          FOLDER="dist/releases/v$VERSION/macOS-$GRAILD_BUILD_ARCH"
+          "$FOLDER/GRAILD.app/Contents/MacOS/GRAILD" > "$FOLDER/launch.log" 2>&1 &
+          APP_PID=$!
+          sleep 30
+          screencapture -x "$FOLDER/launch-screenshot.png" || echo "A screenshot was not possible on this runner."
+          RESULT=0
+          if kill -0 "$APP_PID" 2>/dev/null; then
+            echo "GRAILD was still running after 30 seconds."
+            kill "$APP_PID" || true
+          else
+            CODE=0
+            wait "$APP_PID" || CODE=$?
+            echo "GRAILD closed by itself during startup (exit code $CODE)."
+            RESULT=1
+          fi
+          echo "--- launch log"
+          cat "$FOLDER/launch.log"
+          if grep -q "Traceback" "$FOLDER/launch.log"; then
+            echo "A Python error was printed during startup."
+            RESULT=1
+          fi
+          exit "$RESULT"
+
+      - name: Upload launch log and screenshot
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: GRAILD-macOS-${{ matrix.arch }}-launch-check
+          path: |
+            dist/releases/*/macOS-${{ matrix.arch }}/launch.log
+            dist/releases/*/macOS-${{ matrix.arch }}/launch-screenshot.png
+          if-no-files-found: ignore
+          retention-days: 14
+
       - name: Record ZIP checksum and build information
         run: |
           python - <<'PY'
